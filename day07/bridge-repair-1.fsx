@@ -11,7 +11,6 @@ let parse (path: string) =
         let nums = 
             parts.[1].Trim().Split(' ') 
             |> Array.map int64
-            //|> Array.append 'x'
         int64 parts[0],nums)
 
 let isLegit  ((total: int64), (calibration: int64 array)) =
