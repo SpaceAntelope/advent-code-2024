@@ -2,16 +2,7 @@ open System
 open System.IO
 
 #load "../global.fsx"
-
-let parse (path: string) =
-    path
-    |> File.ReadAllLines
-    |> Array.map (fun line -> 
-        let parts = line.Split(':')
-        let nums = 
-            parts.[1].Trim().Split(' ') 
-            |> Array.map int64
-        int64 parts[0],nums)
+#load "./common.fsx"
 
 let isLegit  ((total: int64), (calibration: int64 array)) =
     let operatorCount = Math.Pow(2, float calibration.Length-1.0) - 1.0|> int
@@ -48,13 +39,13 @@ let isLegit  ((total: int64), (calibration: int64 array)) =
         )
 
 "./input.example"
-|> parse
+|> Common.parse
 // |> Array.take 2
 |> Array.map isLegit
 |> Global.shouldBe [|true;true;false;false;false;false;false;false;true|]
 
 "./input.actual"
-|> parse
+|> Common.parse
 |> Array.filter isLegit
 |> Array.sumBy fst
 |> printfn "Sum of evaluatable calibrations is %d"
