@@ -35,8 +35,8 @@ let lineFromPair (matrix: char array2d) ((node1:int*int),(node2: int*int)) =
     let (row1, col1) = node1
     let (row2, col2) = node2
 
-    let m = float (row1-row2) / float (col1-col2)
-    let b = float row1 - m * float col1
+    let slope = float (row1-row2) / float (col1-col2)
+    let bias = float row1 - slope * float col1
 
     let isOnLine (r,c) = 
         let row' = float r
@@ -48,7 +48,7 @@ let lineFromPair (matrix: char array2d) ((node1:int*int),(node2: int*int)) =
         then col' = col1
         else
             let left = row'
-            let right = m * col' + b
+            let right = slope * col' + bias
             let diff = Math.Abs(left-right)
             
             diff < 0.0001 // 💀
