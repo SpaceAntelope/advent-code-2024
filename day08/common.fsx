@@ -17,13 +17,13 @@ let manhattanDistance (r1, c1) (r2, c2) =
 let printMatrix (matrix: char array2d) (antinodes: (int * int) seq) =
     matrix
     |> Array2D.mapi (fun row col value ->
-        if antinodes |> Seq.contains (row, col) then
+        if antinodes |> Seq.contains (row, col) && matrix.[row,col] = '.' then
             '#'
         else
             value)
     |> sprintf " %A"
     |> fun str -> Regex.Replace(str, @"[\[\]\';]+", "")
-    |> printfn "%s"    
+    |> printfn "%s\n"    
 
 let getUniquePairs (antinodes: (int * int) array) =
     seq {
