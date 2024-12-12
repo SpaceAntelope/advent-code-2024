@@ -1,3 +1,4 @@
+open System.Text.RegularExpressions
 let shouldBe expected actual= 
     if expected <> actual 
     then 
@@ -8,3 +9,9 @@ let matrixIndices matrix =
     let cols = matrix |> Array2D.length2
     ([0..rows-1],[0..cols-1])
     ||> Seq.allPairs
+
+let print (matrix : 'a array2d) =
+    matrix
+    |> sprintf "%A"
+    |> fun x -> Regex.Replace(x, @"[\[\]""';]+","")
+    |> printfn " %s\n"
