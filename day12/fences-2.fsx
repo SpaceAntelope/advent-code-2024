@@ -35,6 +35,7 @@ let calculateCost path expected=
         path
         |> Common.parse
 
+
     printfn "%A" matrix
     matrix    
     |> Common.findRegions
@@ -66,46 +67,79 @@ let perims =
     |> Common.findRegions
     |> List.map (List.ofSeq)
     |> List.map (Common.perimeter matrix)
-    |> List.iter (fun per -> 
+    |> List.map (fun per -> 
         Common.printPerim matrix per
+        let (rowCount,colCount) = Global.matrixSize matrix
+        
 
         per 
         |> List.groupBy fst
-        |> List.map (fun (rowIndex, row) -> 
-            row 
-            |> List.sortBy snd
-            |> List.pairwise
-            |> List.fold (fun sideCount (plot1,plot2) -> 
-                    match plot1, plot2 with
-                    | (_,c1),(_,c2) when Math.Abs(c1-c2) = 1 -> sideCount
-                    | 
-            ) 0
+        |> List.sumBy (fun (rowIndex, rowGroup) -> 
+            printfn "peri for row %d: %A" rowIndex (rowGroup |> List.sortBy snd)
+            let sides = 
+                rowGroup 
+                |> List.sortBy snd
+                //|> List.pairwise
+                |> List.fold (fun sideCount (row,col) -> 
+                        
+                        if per |> List.contains (row+1,col) || per |>List.contains (row-1,col)
+                        then sideCount
+                        else
 
+                            let nextFence = 
+                                if rowGroup |> List.contains (row,col+1) && col < colCount
+                                then Some(row,col+1)
+                                else None
+
+                            printfn "%A -> %A" (row,col) nextFence
+
+                            match nextFence with
+                            | None when 
+                                (per |> List.contains (row-1,col+1) 
+                                && per |> List.contains (row+1,col+1))
+                                ||
+                                per |> List.contains (row-1,col-1) 
+                                && per |> List.contains (row+1,col-1)
+                                    -> sideCount
+                            | None -> sideCount + 1
+                            | Some (nextRow,nextCol) when Math.Abs(nextCol-col) = 1 -> sideCount
+                            | Some (nextRow,nextCol) when 
+                                per |> List.contains (row-1,nextCol) 
+                                && per |> List.contains (row+1,nextCol) -> sideCount
+                            | Some (nextRow,nextCol) when 
+                                per |> List.contains (row-1,nextCol-1) 
+                                && per |> List.contains (row+1,nextCol-1) -> sideCount                        
+                            | Some x ->                           
+                                sideCount + 1) 0            
+
+            printfn "Row: Horizontal sides in %A: %d" rowGroup sides
+            sides)
+            |> printfn "Total horizontal sides for region: %A"        
             )
-        |> ignore
+    |> printfn "Total sides: %A"
 
-        per 
-        |> List.groupBy fst 
-        |> List.filter (fun (key,grp) -> 
-            grp
-            |> List.sortBy snd
-            |> List.pairwise 
-            |> List.forall (fun ((r1,c1),(r2,c2)) -> 
-                        //printfn "%d,%d - %d, %d | %d " r1 c1 r2 c2 (r1-r2); 
-                        Math.Abs(c1-c2)=1 ))
-        |> List.map snd
-        |> List.iter (printfn "h: %A")
+        // per 
+        // |> List.groupBy fst 
+        // |> List.filter (fun (key,grp) -> 
+        //     grp
+        //     |> List.sortBy snd
+        //     |> List.pairwise 
+        //     |> List.forall (fun ((r1,c1),(r2,c2)) -> 
+        //                 //printfn "%d,%d - %d, %d | %d " r1 c1 r2 c2 (r1-r2); 
+        //                 Math.Abs(c1-c2)=1 ))
+        // |> List.map snd
+        // |> List.iter (printfn "h: %A")
 
-        per 
-        |> List.groupBy snd 
-        |> List.filter (fun (key,grp) -> 
-            grp
-            |> List.sortBy fst
-            |> List.pairwise 
-            // forall on empty returns true so we get 1 cell length sides too
-            |> List.forall (fun ((r1,c1),(r2,c2)) -> 
-                        //printfn "%d,%d - %d, %d | %d " r1 c1 r2 c2 (r1-r2); 
-                        Math.Abs(r1-r2)=1 ))
-        |> List.map snd
-        |> List.iter (printfn "v: %A")
-        )
+        // per 
+        // |> List.groupBy snd 
+        // |> List.filter (fun (key,grp) -> 
+        //     grp
+        //     |> List.sortBy fst
+        //     |> List.pairwise 
+        //     // forall on empty returns true so we get 1 cell length sides too
+        //     |> List.forall (fun ((r1,c1),(r2,c2)) -> 
+        //                 //printfn "%d,%d - %d, %d | %d " r1 c1 r2 c2 (r1-r2); 
+        //                 Math.Abs(r1-r2)=1 ))
+        // |> List.map snd
+        // |> List.iter (printfn "v: %A")
+        // )

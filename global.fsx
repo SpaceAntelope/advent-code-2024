@@ -15,3 +15,8 @@ let print (matrix : 'a array2d) =
     |> sprintf "%A"
     |> fun x -> Regex.Replace(x, @"[\[\]""';]+","")
     |> printfn " %s\n"
+
+let matrixSize (matrix : 'a array2d) =
+    let rows = matrix |> Array2D.length1
+    let cols = matrix |> Array2D.length2
+    rows,cols
