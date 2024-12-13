@@ -36,7 +36,6 @@ let parse path =
         })
 
 
-
 let search (mac: ClawMachine) =
     let visited = HashSet<char*int*int>()
     let rec search' tokens pushedA pushedB (point: Point) = 
@@ -45,6 +44,9 @@ let search (mac: ClawMachine) =
                 if pushedA = 100 || pushedB = 100 then [0]
                 else
                     match point with
+                    | x,y when 
+                        x > fst mac.Prize || y > snd mac.Prize
+                        -> [0]
                     | current when current = mac.Prize -> [tokens]
                     | x,y -> 
                         let (xA,yA) = mac.ButtonA
@@ -68,7 +70,7 @@ let search (mac: ClawMachine) =
     | [] -> 0 
     | result -> result |> List.min
 
-"./input.example"
+"./input.examlpe"
 |> parse
 |> Seq.map search
 |> Seq.sum
