@@ -20,3 +20,7 @@ let matrixSize (matrix : 'a array2d) =
     let rows = matrix |> Array2D.length1
     let cols = matrix |> Array2D.length2
     rows,cols
+
+let tee msg x = 
+    printfn "%s: %A" msg x
+    x
