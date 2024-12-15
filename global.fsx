@@ -21,6 +21,14 @@ let matrixSize (matrix : 'a array2d) =
     let cols = matrix |> Array2D.length2
     rows,cols
 
+let printMatrix (matrix : 'a array2d) =
+    let rows,cols = matrixSize matrix
+
+    for row in 0..rows-1 do
+        for col in 0..cols-1 do
+            printf " %O" matrix.[row,col]
+        printfn ""
+
 let tee msg x = 
     printfn "%s: %A" msg x
     x
