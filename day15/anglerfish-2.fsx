@@ -57,6 +57,16 @@ type BoxResult =
     | NoAdjacentBoxes
     | Movable of (int*int) list
 
+[<RequireQualifiedAccess>]
+module BoxResult = 
+    let merge (left: BoxResult) (right: BoxResult) =
+            match left,right with
+            | EncounteredWall, _ -> EncounteredWall
+            | _, EncounteredWall -> EncounteredWall
+            | Movable boxes, Movable moreBoxes -> Movable (boxes@moreBoxes)
+            | NoAdjacentBoxes, result -> result
+            | result, NoAdjacentBoxes -> result
+
 let rec connectedBoxes (boxPos: int*int) (direction: Direction) (boxesFound: (int*int) list) (matrix: char array2d) = 
     let boxRow, boxCol= boxPos 
     let adjacentCells = 
@@ -75,15 +85,24 @@ let rec connectedBoxes (boxPos: int*int) (direction: Direction) (boxesFound: (in
                 [   if matrix.[r1,c1] = ']' then r1,c1-1
                     if matrix.[r2,c2] = '[' then r2,c2+1 ]
             [r1,c1;r2,c2; yield! additional]
-        | '[', Rt -> [boxRow,boxCol+2;boxRow,boxColLeft+3]
-        | Dn -> //[boxRow-1,boxColLeft;boxRow-1,boxColLeft+1]
-            let r1,c1 = boxRow-1,boxColLeft
-            let r2,c2 = boxRow-1,boxColLeft+1
+        | ']', Rt -> failwithf "World is in error, found broken box"
+        | '[', Rt -> [boxRow,boxCol+1;boxRow,boxCol+2]
+        | ']', Dn -> 
+            let r1, c1 = boxRow+1,boxCol-1
+            let r2, c2 = boxRow+1,boxCol
             let additional = 
                 [   if matrix.[r1,c1] = ']' then r1,c1-1
-                    if matrix.[r2,c2] = '[' then r2,c1+1 ]
+                    if matrix.[r2,c2] = '[' then r2,c2+1 ]
             [r1,c1;r2,c2; yield! additional]
-        | Lt -> [boxRow,boxColLeft-2; boxRow,boxColLeft-1]
+        | '[', Dn -> 
+            let r1, c1 = boxRow+1,boxCol
+            let r2, c2 = boxRow+1,boxCol+1
+            let additional = 
+                [   if matrix.[r1,c1] = ']' then r1,c1-1
+                    if matrix.[r2,c2] = '[' then r2,c2+1 ]
+            [r1,c1;r2,c2; yield! additional]
+        | ']', Lt -> [boxRow,boxCol-2; boxRow,boxCol-1]
+        | '[', Lt -> failwithf "Found broken box"
         |> List.map (fun (row,col) -> (row,col),matrix.[row,col])
 
     if adjacentCells |> List.exists (fun ((_,_),value) -> value = '#')
@@ -109,27 +128,31 @@ let rec connectedBoxes (boxPos: int*int) (direction: Direction) (boxesFound: (in
                 if state = EncounteredWall // same ax first matched rule, but here it prevents more recursion
                 then EncounteredWall
                 else 
-                    match state, connectedBoxes pos direction updatedBoxesFound matrix with
-                    | EncounteredWall, _ -> EncounteredWall
-                    | _, EncounteredWall -> EncounteredWall
-                    | Movable boxes, Movable moreBoxes -> Movable (boxes@moreBoxes)
-                    | NoAdjacentBoxes, result -> result
-                    | result, NoAdjacentBoxes -> result
-                    ) NoAdjacentBoxes
+                    connectedBoxes pos direction updatedBoxesFound matrix
+                    |> BoxResult.merge state) NoAdjacentBoxes
      
 
-let moveBoxes (position: int*int) (leftBoxPos: int*int) (matrix : char array2d) =
+let moveBoxes (position: int*int) (boxPos: int*int) (matrix : char array2d) =
     let rowCount, colCount = Global.matrixSize matrix
     let row,col = position
-    let boxRow, boxColLeft= leftBoxPos
-    let dir = direction position leftBoxPos
+    let boxRow, boxCol= boxPos
+    let dir = direction position boxPos
 
-    let boxesToPush = 
-        match dir with 
-        | Up -> [boxRow-1,boxColLeft;boxRow-1,boxColLeft+1]
-        | Rt -> [boxRow,boxColLeft+1]
-        | Dn -> [boxRow-1,boxColLeft;boxRow-1,boxColLeft+1]
-        | Lt -> [boxRow,boxColLeft-1]
+    let boxPosPair = 
+        match matrix.[boxRow,boxCol] with
+        | ']' -> boxRow, boxCol - 1
+        | '[' -> boxRow, boxCol + 1
+
+    let boxesToPush = connectedBoxes boxPos dir [boxPos;boxPosPair] matrix
+        
+        
+    match boxesToPush with
+    | BoxResult.EncounteredWall
+        // match dir with 
+        // | Up -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
+        // | Rt -> [boxRow,boxCol+1]
+        // | Dn -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
+        // | Lt -> [boxRow,boxCol-1]
 
 
     let boxCount =
