@@ -43,8 +43,60 @@ let printPath  (path: Map<int*int,FacingDirection>)  (matrix: char array2d) =
         printfn ""
     printfn ""
 
+let reconstructPath (cameFrom : Dictionary<int*int,int*int>) current = 
+    let totalPath = ResizeArray()
+    let mutable _current = current
+    while cameFrom.ContainsKey current do
+        _current <- cameFrom.[current]
+        totalPath.Add _current
+
+    totalPath |> Seq.rev
+
+let neihgbors (node: int*int) = 
+    let row,col = node
+    [row-1,col;row,col+1;row+1,col;row,col-1]
+
+
+// let AStar (start:int*int) (stop:int*int) (h: (int*int)->int) (matrix: char array2d)=
+//     let openSet = PriorityQueue<int*int,int>()
+   
+//     let cameFrom = Dictionary<int*int,int*int>()
+    
+//     let gScore = Dictionary<int*int,int>()
+//     gScore.Add( start, 0)
+
+//     let fScore = Dictionary<int*int,int>()
+//     fScore.Add( start, (h start))
+//     openSet.Add(start, fScore.[start])
+
+//     while openSet.Count > 0 do
+//         let current = openSet.Dequeue() // |> Seq.minBy (fun point -> fScore.[point])
+//         if current = stop
+//         then reconstructPath cameFrom current
+//         else 
+//             openSet.Remove(current)
+//             let neighbors = 
+//                 neihgbors current 
+//                 |> List.filter (fun (row,col) -> matrix.[row,col] <> '#' )
+
+//             for n in (neihgbors current) do
+//                 let tentativeGScore = gScore[current] 
+//                 ()
+
+
+                //cameFrom.Add(n, current)
+
 
 let travel (matrix: char array2d) =
+    let (rows,cols) =Global.matrixSize matrix
+    let shortestDistanceSoFar = Array2D.create rows cols (Int32.MaxValue)
+    
+    let initPosition =
+        matrix        
+        |> Global.matrixIndices
+        |> Seq.find (fun (row,col) -> matrix.[row,col] = 'S')
+    
+    shortestDistanceSoFar.[fst initPosition, snd initPosition] <- 0
 
     let mutable minScore = 1000000000//204824
     let sw = Stopwatch()
@@ -68,14 +120,15 @@ let travel (matrix: char array2d) =
             [Fwd;Right;Left]             
             |> List.map (fun moveDir -> move (row,col) dir moveDir)
             |> List.filter(fun ((row,col), _, score ) -> 
-                (totalScore + score) < minScore && matrix.[row,col] <> '#' && not (path |> Map.containsKey(row,col)))
+                 (totalScore + score) < shortestDistanceSoFar.[row,col]
+                && (totalScore + score) < minScore 
+                && matrix.[row,col] <> '#' 
+                && not (path |> Map.containsKey(row,col)))
             |> List.collect(fun (pos,faceDir, score) -> 
+                shortestDistanceSoFar.[fst pos, snd pos] <- totalScore + score
                 travel' pos faceDir (totalScore + score) (depth+1) updatedMap)
         
-    let initPosition =
-        matrix        
-        |> Global.matrixIndices
-        |> Seq.find (fun (row,col) -> matrix.[row,col] = 'S')
+    
 
     travel' initPosition E 0 0 (Map.empty)
 
