@@ -1,12 +1,14 @@
 open System
 open System.IO
 
-let b A = 
-    let b1 = (A % 8L) ^^^ 2L
-    let c = A / int64 (Math.Pow(2.0, float b1))
-    let b2 = b1 ^^^ 3L  
-    b2 ^^^ c
-let output A = (b A)%8L
+(* Compressed version of the puzzle instructions, probably specific to my input *)
+let output A = 
+    let b = 
+        let b1 = (A % 8L) ^^^ 2L
+        let c = A / int64 (Math.Pow(2.0, float b1))
+        let b2 = b1 ^^^ 3L  
+        b2 ^^^ c
+    b%8L
 
 let validate (target: int64[]) (A:int64) = 
     target 
