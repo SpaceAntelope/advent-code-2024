@@ -8,14 +8,14 @@ let b A =
     b2 ^^^ c
 let output A = (b A)%8L
 
-let validator  (target: int64[]) (A:int64) = 
+let validate (target: int64[]) (A:int64) = 
     target 
     |> Array.mapi (fun index targetElement -> targetElement, output <| int64 (A / int64 (Math.Pow(8.0, float index))))
     |> Array.forall (fun (expected, actual) -> expected = actual)
 
 let bruteForceSearch (target: int64[]) =
     let maxValue = 10.0**(float target.Length+1.0) - 1.0  |> int64
-    seq {0L..maxValue} |> Seq.find (validator target)
+    seq {0L..maxValue} |> Seq.find (validate target)
 
 "./input.actual"
 |> File.ReadAllLines
