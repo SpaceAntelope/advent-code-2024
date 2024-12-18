@@ -106,6 +106,7 @@ let printState (state: State) =
 
 let runBespokeProgram (computerState: State) = 
     let mutable state = computerState
+    printState state
     while state.A <> 0 do
         state <- bespokeComputation state
         printState state
@@ -173,7 +174,9 @@ then
         |> parse
         // |> fun state -> {state with A = 137438953472L }
         |> fun state -> {state with A = int64 fsi.CommandLineArgs.[1] }
-        |> runProgram
+        |> fun state -> 
+            runBespokeProgram state |> ignore
+            runProgram state 
         |> fun state -> state.Out |> List.map string |> fun x -> String.Join (',', x)
         |> printfn "Joined output is %s"
 
@@ -215,8 +218,6 @@ else
     |> Global.shouldBe "3,7,1,7,2,1,0,6,3"
 
     // 0L
-
-
     let solve (targetOutput: int64[]) =
         let b A = 
             let b1 = (A % 8L) ^^^ 2L // ^^^ 3L)
@@ -371,3 +372,7 @@ else
     //             B = k |> List.min
     //             C = k |> List.max   |}
 
+// let validator  (target: int64 list) (A:int64) = 
+//     let tentative = target |> List.mapi (fun i _ -> output <| int64 (A / int64 (Math.Pow(8.0, float i))))
+//     // printfn "%A" tentative
+//     tentative = target
