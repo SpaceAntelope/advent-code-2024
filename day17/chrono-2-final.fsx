@@ -19,14 +19,18 @@ let bruteForceSearch (target: int64[]) =
     let maxValue = 10.0**(float target.Length+1.0) - 1.0  |> int64
     seq {0L..maxValue} |> Seq.find (validate target)
 
+let parse path =
+    path
+    |> File.ReadAllLines
+    |> Array.skip 4
+    |> Array.last
+    |> _.Split(' ')
+    |> Array.last
+    |> _.Split(',')
+    |> Array.map int64
+
 "./input.actual"
-|> File.ReadAllLines
-|> Array.skip 4
-|> Array.last
-|> _.Split(' ')
-|> Array.last
-|> _.Split(',')
-|> Array.map int64
+|> parse
 |> Array.splitInto 2
 |> Array.map bruteForceSearch 
 |> Array.map (fun x -> Convert.ToString(x,8))
