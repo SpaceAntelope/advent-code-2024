@@ -16,8 +16,7 @@ let parse path =
     let lines =
         path 
         |> File.ReadAllLines
-    {
-        A = lines.[0].Split(' ') |> Array.last |> int64
+    {   A = lines.[0].Split(' ') |> Array.last |> int64
         B = lines.[1].Split(' ') |> Array.last |> int64
         C = lines.[2].Split(' ') |> Array.last |> int64
         Index = 0
@@ -27,34 +26,36 @@ let parse path =
             |> _.Split(',') 
             |> List.ofArray 
             |> List.map int
-        Out = []
-    }
+        Out = []    }
 
-let evaluateComboOperand (op: int) (state: State) =
+let evaluateComboOperand (op: int64) (state: State) =
     match op with
     | x when x >=0 && x <= 3 -> x |> int64
-    | 4 -> state.A
-    | 5 -> state.B
-    | 6 -> state.C
+    | 4L -> state.A
+    | 5L -> state.B
+    | 6L -> state.C
     | x -> failwithf "Invalid operand %d" x
 
 let mutable printcommands = true
-let evaluateCommand (opcode: int) (literalOperand: int) (state: State) =
+let mutable fmt = 10
+let b (i: int64) =
+        match fmt with
+        | 10 -> string i
+        | 8 -> Convert.ToString(i,8)
+        | 2 -> Convert.ToString(i,2)
+        | _ -> failwithf "sure"
+
+let evaluateCommand (opcode: int) (literalOperand: int64) (state: State) =
     let comboValue = evaluateComboOperand literalOperand state
-    let b2 (i :int64) = Convert.ToString(i,2)
-    let b8 (i :int64) = Convert.ToString(i,8)
+    
     let prnt cmd =
         if printcommands 
-        //then printfn "%d:\t%s %d (%d)\tA: %d B: %d C: %d\t%A" state.Index cmd comboValue literalOperand state.A state.B state.C state.Out
         then 
-            [ 
-                sprintf "%2d: %s %d (%d)" state.Index cmd comboValue literalOperand |> _.PadRight(40)
-                sprintf "A: %-16s B: %-16s C: %-16s"  (b8 state.A) (b8 state.B) (b8 state.C) //|> _.PadRight(75)
-                sprintf " %A" (state.Out |> List.map b8)
-            ] |> List.reduce(+) |> printfn "%s"
+            [   sprintf "%2d: %s C:%d L:%d" state.Index cmd comboValue literalOperand |> _.PadRight(40)
+                sprintf "A: %-16s B: %-16s C: %-16s"  (b state.A) (b state.B) (b state.C) //|> _.PadRight(75)
+                sprintf " %A" (state.Out |> List.map b) ] 
+            |> List.reduce(+) |> printfn "%s"
 
-    //if state.Index = 10 then printfn "A: %d (%s) [%s]\tB: %d (%s) [%s]" state.A (b8 state.A) (b2 state.A) state.B (b8 state.B) (b2 state.B)
-    // if state.Index = 10 then printfn "%d,%d" state.A state.B
     match opcode with
     | adv when adv = 0 -> 
         prnt "adv"
@@ -69,11 +70,11 @@ let evaluateCommand (opcode: int) (literalOperand: int) (state: State) =
         prnt "jnz"
         if printcommands then printfn ""
         if state.A <> 0 
-        then { state with Index = literalOperand } 
+        then { state with Index = int literalOperand } 
         else { state with Index = state.Index + 2 }
     | bxc when bxc = 4 -> 
         prnt "bxc"
-        { state with B = state.B  ^^^ state.C; Index = state.Index + 2}
+        { state with B = state.B ^^^ state.C; Index = state.Index + 2}
     | out when out = 5 -> 
         prnt "out"
         { state with Out = [ yield! state.Out; yield comboValue % 8L]; Index = state.Index + 2}
@@ -85,6 +86,38 @@ let evaluateCommand (opcode: int) (literalOperand: int) (state: State) =
         { state with C = state.A / int64 (Math.Pow(2.0, float comboValue)); Index = state.Index + 2}
     | x -> failwithf "Unknown opcode %d" x
 
+
+let bespokeComputation (state: State) =
+    let b,c = 
+        let b1 = (state.A % 8L) ^^^ 2L // ^^^ 3L)
+        let c = state.A / int64 (Math.Pow(2.0, float b1))
+        let b2 = b1 ^^^ 3L  
+        b2 ^^^ c, c
+    
+    { state with 
+        A = state.A / 8L
+        B = b
+        C = c
+        Out = state.Out@[int64(b%8L)] }
+
+let printState (state: State) = 
+    printf "A: %-16s B: %-16s C: %-16s"  (b state.A) (b state.B) (b state.C) //|> _.PadRight(75)
+    printfn "\t%A" state.Out
+
+let runBespokeProgram (computerState: State) = 
+    let mutable state = computerState
+    while state.A <> 0 do
+        state <- bespokeComputation state
+        printState state
+
+    state
+    // List.unfold (fun state -> 
+    //     let newState = shortComputation state
+    //     if newState.A = 0 
+    //     then None
+    //     else Some(newState,newState)
+    // ) computerState
+    // |> List.last
 
 let next (state: State) =
     if state.Index >= state.Instructions.Length
@@ -131,105 +164,210 @@ let runTargetedProgram (state: State) (expected: int64 list) =
                 )
     |> List.last
 
-"./input.example"
-|> parse
-|> runProgram
-|> fun state -> state.Out
-|> Global.shouldBe [4;6;3;5;6;3;5;2;1;0]
+printfn "%A" fsi.CommandLineArgs
 
-printfn "-------"
+if fsi.CommandLineArgs.Length > 1
+then 
+    let showStack() = 
+        "./input.actual"
+        |> parse
+        // |> fun state -> {state with A = 137438953472L }
+        |> fun state -> {state with A = int64 fsi.CommandLineArgs.[1] }
+        |> runProgram
+        |> fun state -> state.Out |> List.map string |> fun x -> String.Join (',', x)
+        |> printfn "Joined output is %s"
+
+    showStack()
+    fmt <- 8
+    showStack()
+    fmt <- 2
+    showStack()
+
+    0L
+else 
+
+    // "./input.example"
+    // |> parse
+    // |> runShortProgram
+    // |> fun state -> state.Out
+    // |> Global.shouldBe [4;6;3;5;6;3;5;2;1;0]
+
+    printfn "-------"
 
 
-"./input.actual"
-|> parse
-// |> fun state -> {state with A = 549755813888L }
-|> runProgram
-|> fun state -> state.Out |> List.map string |> fun x -> String.Join (',', x)
-|> printfn "Joined output is %s"
+    "./input.actual"
+    |> parse
+    // |> fun   state -> {state with A = 549755813888L }
+    // |> runShortProgram
+    |> runProgram
+    |> _.Out 
+    |> List.map string
+    |> List.reduce(sprintf "%s,%s") 
+    |> Global.shouldBe "3,7,1,7,2,1,0,6,3"
 
-"./input.actual"
-|> parse
-// |> fun state -> {state with A = 137438953472L }
-|> fun state -> {state with A = 40210765889012L }
-|> fun state -> {state with A = 80421323455988L }
-|> runProgram
-|> fun state -> state.Out |> List.map string |> fun x -> String.Join (',', x)
-|> printfn "Joined output is %s"
+    "./input.actual"
+    |> parse
+    // |> fun   state -> {state with A = 549755813888L }
+    |> runBespokeProgram
+    |> _.Out 
+    |> List.map string
+    |> List.reduce(sprintf "%s,%s") 
+    |> Global.shouldBe "3,7,1,7,2,1,0,6,3"
 
-printcommands <- false
+    // 0L
 
-// "./input.actual"
-// |> parse
-// |> fun state ->
-//     // let mutable A = 550510000000L
-//     let mutable A = 1L
-//     let mutable finalState = { state with A = A-1L }
-//     let expected = state.Instructions |> List.map int64
+
+    let solve (targetOutput: int64[]) =
+        let b A = 
+            let b1 = (A % 8L) ^^^ 2L // ^^^ 3L)
+            let c = A / int64 (Math.Pow(2.0, float b1))
+            let b2 = b1 ^^^ 3L  
+            b2 ^^^ c
+        let output A = (b A)%8L
+        
+        printfn "%A" targetOutput
+
+        let rec solve' (depth: int) (path: int64 list) =
+            if path <> [] 
+            then 
+                printf "\nDepth %d Path: %A Target: %A" depth path targetOutput.[depth..]
+                path |> List.reduce(fun s c -> s*8L+c) |> fun x -> printfn " A = %d Output: %A Next: %A" x (output x) targetOutput.[depth-1]
+            // else printfn ""
+            
+            [
+                if depth = 0 
+                then path
+                else
+                    yield! 
+                        [0L..7L] 
+                        |> List.map (fun i -> i, path |> List.fold (fun s c -> s * 8L + c) i)
+                        // |> Global.tee "mapping: "
+                        |> List.filter (fun (octalDigit,A) -> 
+                            printfn "A: %d Out: %A Target: %A" A (output A) targetOutput.[depth-1]
+                            output A = targetOutput.[depth-1])
+                        // |> Global.tee "filtered: "
+                        |> List.collect (fun (octalDigit,totalA) -> solve' (depth-1) (path |> List.append [octalDigit]))                
+                        // |> Global.tee "collected: "
+            ]
+
+        solve' targetOutput.Length []
+        // { state with 
+        //     A = state.A / 8L
+        //     B = b
+        //     C = state.A/8L
+        //     Out = state.Out@[b%8L] }
+        //     for i in 0..7 do 
     
-//     while finalState.Out <> expected do
-//         A <- A + 1L
-//         finalState <- runTargetedProgram { state with A = A } expected
-//         if A % 10000000L = 0 then printfn "A: %d Out: %A" finalState.A finalState.Out
-//         // if finalState.Out <> [] then printfn "A: %d Out: %A" A finalState.Out
-    
-//     printfn "Done! A: %d Out: %A" finalState.A finalState.Out
-
-let dfs (initA: int64 list) (state: State) = 
-    let expected = state.Instructions |> List.map int64
-    let mutable longestOut = 0
-    let rec dfs' (depth:int)  (octA: int64 list ) =     
-
-        [0L..7L] 
-        |> List.reduce(fun s c ->                 
-                // printfn "%d %A" depth octA
-                let updatedOctA = octA |> List.updateAt depth c
-                let decA = updatedOctA |> List.reduce (fun s' c' -> s' * 8L + c')
-                let newState = runTargetedProgram { state with A = decA } expected
-
-                if newState.Out.Length > longestOut 
-                then 
-                    printfn "Longest out: %d %A for %d (%s)" newState.Out.Length newState.Out decA (updatedOctA |> List.fold (fun s c -> s + string c) "")
-                    longestOut <- newState.Out.Length
-
-                if newState.Out = expected
-                then decA
-                else if depth < 8//expected.Length-1
-                then dfs' (depth+1) updatedOctA
-                else 0L)
-                
-
-    // List.replicate (state.Instructions.Length) 0L
-    // |> dfs' 0
-    dfs' 0 initA
-
-// let dfs2 (state: State) =
-//     let expected = state.Instructions |> List.map int64
-//     let mutable longestOut = 0
-//     let rec dfs' (depth:int) (octA: int64 list ) =        
-//         [0L..7L] 
-//         |> List.reduce(fun s c ->                 
-//                 // printfn "%d %A" depth octA
-//                 let updatedOctA = octA |> List.updateAt depth c
-//                 let decA = updatedOctA |> List.reduce (fun s' c' -> s' * 8L + c')
-//                 let newState = runTargetedProgram { state with A = decA } expected
-
-//                 if newState.Out.Length > longestOut 
-//                 then 
-//                     printfn "Longest out: %d %A for %d (%s)" newState.Out.Length newState.Out decA (updatedOctA |> List.fold (fun s c -> s + string c) "")
-//                     longestOut <- newState.Out.Length
-
-//                 if newState.Out = expected
-//                 then decA
-//                 else if depth < expected.Length-1
-//                 then dfs' (depth+1) updatedOctA
-//                 else 0L)
-                
-
-//     List.replicate (state.Instructions.Length) 0L
-//     |> dfs' 0
+    solve [|2L;4L;1L;2L;7L;5L;1L;3L;4L;3L;5L;5L;0L;3L;3L;0L|]
+    |> printfn "%A"
 
 
-"./input.actual"
-|> parse
-// |> dfs [4;0;2;1;0;7;6;5;8;8;9;0;1;2]
-|> dfs [0;0;0;0;0;0;7;4;1;0;4;3;0;8]
+    666L
+
+
+
+
+    // "./input.actual"
+    // |> parse
+    // // |> fun state -> {state with A = 137438953472L }
+    // |> fun state -> {state with A = 40210765889012L }
+    // |> fun state -> {state with A = 80421323455988L }
+    // |> runProgram
+    // |> fun state -> state.Out |> List.map string |> fun x -> String.Join (',', x)
+    // |> printfn "Joined output is %s"
+
+    // printcommands <- false
+
+    // "./input.actual"
+    // |> parse
+    // |> fun state ->
+    //     // let mutable A = 550510000000L
+    //     let mutable A = 1L
+    //     let mutable finalState = { state with A = A-1L }
+    //     let expected = state.Instructions |> List.map int64
+        
+    //     while finalState.Out <> expected do
+    //         A <- A + 1L
+    //         finalState <- runTargetedProgram { state with A = A } expected
+    //         if A % 10000000L = 0 then printfn "A: %d Out: %A" finalState.A finalState.Out
+    //         // if finalState.Out <> [] then printfn "A: %d Out: %A" A finalState.Out
+        
+    //     printfn "Done! A: %d Out: %A" finalState.A finalState.Out
+
+    // let dfs (initA: int64 list) (state: State) = 
+    //     let expected = state.Instructions |> List.map int64
+    //     let mutable longestOut = 0
+    //     let rec dfs' (depth:int)  (octA: int64 list ) =     
+
+    //         [0L..7L] 
+    //         |> List.reduce(fun s c ->                 
+    //                 // printfn "%d %A" depth octA
+    //                 let updatedOctA = octA |> List.updateAt depth c
+    //                 let decA = updatedOctA |> List.reduce (fun s' c' -> s' * 8L + c')
+    //                 let newState = runTargetedProgram { state with A = decA } expected
+
+    //                 if newState.Out.Length > longestOut 
+    //                 then 
+    //                     printfn "Longest out: %d %A for %d (%s)" newState.Out.Length newState.Out decA (updatedOctA |> List.fold (fun s c -> s + string c) "")
+    //                     longestOut <- newState.Out.Length
+
+    //                 if newState.Out = expected
+    //                 then decA
+    //                 else if depth < 8//expected.Length-1
+    //                 then dfs' (depth+1) updatedOctA
+    //                 else 0L)
+                    
+
+    //     // List.replicate (state.Instructions.Length) 0L
+    //     // |> dfs' 0
+    //     dfs' 0 initA
+
+    // let dfs2 (state: State) =
+    //     let expected = state.Instructions |> List.map int64
+    //     let mutable longestOut = 0
+    //     let rec dfs' (depth:int) (octA: int64 list ) =        
+    //         [0L..7L] 
+    //         |> List.reduce(fun s c ->                 
+    //                 // printfn "%d %A" depth octA
+    //                 let updatedOctA = octA |> List.updateAt depth c
+    //                 let decA = updatedOctA |> List.reduce (fun s' c' -> s' * 8L + c')
+    //                 let newState = runTargetedProgram { state with A = decA } expected
+
+    //                 if newState.Out.Length > longestOut 
+    //                 then 
+    //                     printfn "Longest out: %d %A for %d (%s)" newState.Out.Length newState.Out decA (updatedOctA |> List.fold (fun s c -> s + string c) "")
+    //                     longestOut <- newState.Out.Length
+
+    //                 if newState.Out = expected
+    //                 then decA
+    //                 else if depth < expected.Length-1
+    // //                 then dfs' (depth+1) updatedOctA
+    // //                 else 0L)
+                    
+
+    // //     List.replicate (state.Instructions.Length) 0L
+    // //     |> dfs' 0
+
+
+    // "./input.actual"
+    // |> parse
+    // // |> dfs [4;0;2;1;0;7;6;5;8;8;9;0;1;2]
+    // |> dfs [0;0;0;0;0;0;7;4;1;0;4;3;0;8]
+
+
+
+    // let rec count depth current = 
+    //     if depth = 0
+    //     then [current]
+    //     else 
+    //         [0..7]
+    //         |> List.collect(fun i -> count (depth-1) (current * 8 + i))
+
+    // [1..7] 
+    // |> List.collect (count 14)
+    // |> List.distinct
+    // |> fun k ->
+    //         {|  A = k |> List.length
+    //             B = k |> List.min
+    //             C = k |> List.max   |}
+

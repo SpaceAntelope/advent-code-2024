@@ -40,6 +40,7 @@ let evaluateComboOperand (op: int) (state: State) =
 
 let evaluateCommand (opcode: int) (literalOperand: int) (state: State) =
     let comboValue = evaluateComboOperand literalOperand state
+    printfn "code: %d c: %d l: %d %A" opcode comboValue literalOperand state
     match opcode with
     | adv when adv = 0 -> { state with A = state.A / int (Math.Pow(2.0, float comboValue)); Index = state.Index + 2}
     | bxl when bxl = 1 -> { state with B = state.B ^^^ literalOperand ; Index = state.Index + 2}
