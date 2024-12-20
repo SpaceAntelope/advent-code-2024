@@ -39,3 +39,4 @@ let manhattan (a: int*int) (b: int*int) =
     let r1,c1 = a
     let r2,c2 = b
     Math.Abs(r2-r1) + Math.Abs(c2-c1)
+
