@@ -14,7 +14,6 @@ let parse path=
 
     patterns, designs
 
-let mutable count = 0
 let synthesize (genepool: string[]) (target: string) =
     let relevantGenes = genepool |> Array.filter (fun gene -> target.Contains gene)
     let rec search index (genome : string list) : string list option  =        
@@ -23,8 +22,6 @@ let synthesize (genepool: string[]) (target: string) =
         else if index >= target.Length
         then None
         else
-            count <- count + 1
-
             relevantGenes 
             |> Seq.filter (fun gene -> 
                 gene.[0] = target.[index] 
@@ -47,8 +44,6 @@ parse "./input.actual"
     |> Array.choose (synthesize patterns)
     |> Array.length
     |> printfn "There are %d possible designs."
-
-printfn "%d" count
 
 // parse "./input.actual"
 // |> fun (patterns,designs) ->
