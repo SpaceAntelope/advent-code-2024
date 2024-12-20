@@ -18,9 +18,14 @@ type CheatingStatus = UseCheats of Cheat option | NoCheats
 
 let printMaze (maze: char array2d) (path: (int*int) seq) (cheats: Cheat list)=  
     let (rows,cols) = Global.matrixSize maze
+    let cheatSet = cheats |> List.map fst |> Set.ofList
     for row in 0..rows-1 do
         for col in 0..cols-1 do
-            if maze.[row,col] = '#' then '░'
+            if cheatSet.Contains (row,col)
+            then '▚'
+            else if maze.[row,col] = '#' then '░'
+            else if maze.[row,col] = 'E' || maze.[row,col] = 'S'
+            then maze.[row,col]
             else if path |> Seq.contains (row,col)
             then '▇'
             else maze.[row,col]
@@ -70,13 +75,23 @@ let availableCheats' (neighbors: Neighbor list) (matrix: char array2d) : Cheat l
         | x -> None        
     )
 
-let availableCheats (current: Point) (matrix: char array2d) : Cheat list = 
+let isNotOverflowing (size: int*int) (point: Point) =
+    let rows,cols = size
+    let row,col = point
+    row >= 0 && col >= 0 && row < rows && col < cols
+
+let availableCheats (matrix: char array2d) (current: Point) : Cheat list = 
     let row,col= current
+    let rows,cols = matrix |> Global.matrixSize
+    let noOverflow point = isNotOverflowing (rows,cols) point
+
     [   (row-1,col),(row-2,col)
         (row+1,col),(row+2,col)
         (row,col-1),(row,col-2)
-        (row,col+1),(row,col+2)    ]
-    |> List.filter (fun ((r1,c1),(r2,c2)) -> matrix.[r1,c1] = '#' && matrix.[r2,c2] <> '#')
+        (row,col+1),(row,col+2)    ]    
+    |> List.filter (fun ((r1,c1),(r2,c2)) -> 
+        noOverflow (r1,c1) && noOverflow (r2,c2)
+        && matrix.[r1,c1] = '#' && matrix.[r2,c2] <> '#')
 
 let travel (matrix: char array2d) =
     let (rows,cols) =Global.matrixSize matrix
@@ -89,39 +104,118 @@ let travel (matrix: char array2d) =
         
     shortestDistanceSoFar.[fst initPosition, snd initPosition] <- 0
 
-    let cheatsUsed = HashSet<Cheat>()
+    // let cheatsUsed = HashSet<Cheat>()
     // let mutable minScore = 1000000000//204824
     let sw = Stopwatch()
     sw.Start()
 
-    let rec travel' (position: int*int) (picoseconds: int) (path: Point list) =
+    let rec travel' (position: int*int) (score: int) (path: Point list) =
         let row,col = position
         let updatedPath = path |> List.append [(row,col)]
 
         if matrix.[row,col] = 'E'
         then 
-            // printPath path matrix
-            // printMaze matrix updatedPath
-            printfn "Score: %d Path length: %d %A" picoseconds (updatedPath.Length) (sw.Elapsed)
-            //if picoseconds < minScore then minScore <- picoseconds
+            printMaze matrix updatedPath []
+            printfn "Score: %d Path length: %d %A" score (updatedPath.Length) (sw.Elapsed)
             [updatedPath]
         else
             let neighborhood = neighbors position
-            //let cheats = availableCheats position matrix
 
             neighborhood
             |> List.filter(fun (row,col) -> 
-                 (picoseconds + 1) < shortestDistanceSoFar.[row,col]
-                // && (picoseconds + 1) < minScore 
+                (score + 1) < shortestDistanceSoFar.[row,col]
                 && matrix.[row,col] <> '#' 
                 && not (path |> List.contains(row,col)))
             |> List.collect(fun (pos) -> 
-                let newScore = picoseconds + 1
-                shortestDistanceSoFar.[fst pos, snd pos] <- newScore
+                let newScore = score + 1
+                shortestDistanceSoFar.[fst pos, snd pos] <- newScore                
                 travel' pos newScore updatedPath)
+    
+    let rec countPicoseconds (position: int*int) (score: int) (activeCheat: Point) (path : Point list) (remainingScoreIndex: IReadOnlyDictionary<Point,int> ) (shortestDistanceSoFarIndex: int array2d) (matrix : char array2d) =
+        let row,col = position
 
-    travel' initPosition 0 []
+        if matrix.[row,col] = 'E'
+        then [path]
+            //printMaze matrix updatedPath []
+            //printfn "Score: %d Path length: %d %A" score (updatedPath.Length) (sw.Elapsed)
+            //[updatedPath]
+        else
+            let neighborhood = neighbors position
+
+            neighborhood
+            |> List.filter(fun (row,col) -> 
+                (score + 1) < shortestDistanceSoFarIndex.[row,col]
+                && matrix.[row,col] <> '#')
+            |> List.collect(fun (nextRow,nextCol) -> 
+                    let key = nextRow,nextCol
+                // if remainingScoreIndex.ContainsKey key && shortestDistanceSoFarIndex.[fst activeCheat, snd activeCheat] < Int32.MaxValue
+                // then remainingScoreIndex.[key]
+                // else 
+                    let newScore = score + 1
+                    shortestDistanceSoFarIndex.[nextRow,nextCol] <- newScore
+                    countPicoseconds key newScore activeCheat (path@[key]) remainingScoreIndex shortestDistanceSoFarIndex matrix)
+            
+            
+
+    let fullPath = 
+        travel' initPosition 0 []
+        |> List.head
+
+    printfn "Uncheated path length is %d" fullPath.Length
+    // printfn "Uncheated path length is %s" (fullPath |> List.fold (sprintf "%s %A") "")
+
+    let cheats = 
+        let index = HashSet<Point>()
+        
+        fullPath 
+        |> List.collect (availableCheats matrix)         
+        |> List.filter (fun (pt1, _) ->  index.Add(pt1))
+    
+    printMaze matrix fullPath cheats
+
+    let distanceToEndIndex = 
+        let cheatIndex = 
+            cheats 
+            |> List.map (fun cheat -> fst cheat, -1) // so walk-through wall always gets chosen when in neighbors
+
+        fullPath 
+        |> List.rev
+        |> List.mapi (fun index point -> point, fullPath.Length - index) 
+        |> List.append cheatIndex
+        |> readOnlyDict
+
+    cheats 
+    |> List.map(fun cheat -> 
+            let (deletedWallRow, deletedWallCol),_ = cheat
+            let matrix' = Array2D.copy matrix
+            matrix'.[deletedWallRow,deletedWallCol] <- '.'
+            let shortestDistanceSoFar = Array2D.create rows cols (Int32.MaxValue)
+            shortestDistanceSoFar.[fst initPosition, snd initPosition] <- 0
+            // shortestDistanceSoFar.[deletedWallRow, deletedWallCol] <- -1
+            let pathWithCheat = 
+                countPicoseconds initPosition 0 (fst cheat) [] distanceToEndIndex shortestDistanceSoFar matrix'
+                |> List.last
+
+            printfn "CHEAT #%A -> psecs save %d" cheat (fullPath.Length - 1 - pathWithCheat.Length)
+            // pathWithCheat
+            // |> List.iter (fun path -> 
+            //     printfn "Path saved %d psecs" (fullPath.Length - path.Length - 1)
+            
+            //printMaze matrix' pathWithCheat [cheat]
+            
+            //pathWithCheat |> List.map(fun path -> fullPath.Length - 1 - path.Length)
+            fullPath.Length - 1 - pathWithCheat.Length
+    ) 
+    |> List.countBy id
+    |> List.sortBy fst
+    |> List.iter (fun (score, freq) -> printfn $"There are {freq} cheats that save {score} picoseconds.")
+
 
 "./input.example"    
 |> parse
 |> travel
+
+// "./input.actual"
+// |> parse
+// |> travel
+
