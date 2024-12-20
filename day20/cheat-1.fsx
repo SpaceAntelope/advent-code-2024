@@ -140,7 +140,11 @@ let travel (matrix: char array2d) =
             //printfn "Score: %d Path length: %d %A" score (updatedPath.Length) (sw.Elapsed)
             //[updatedPath]
         else
-            let neighborhood = neighbors position
+            let neighborhood = 
+                let n = neighbors position
+                if n |> List.contains activeCheat && shortestDistanceSoFarIndex.[fst activeCheat, snd activeCheat] = Int32.MaxValue
+                then [activeCheat]
+                else n
 
             neighborhood
             |> List.filter(fun (row,col) -> 
@@ -169,9 +173,10 @@ let travel (matrix: char array2d) =
         
         fullPath 
         |> List.collect (availableCheats matrix)         
-        |> List.filter (fun (pt1, _) ->  index.Add(pt1))
+        |> List.filter (fun (pt1, _) ->  index.Add(pt1)) // prevent inverted direction cheats
     
     printMaze matrix fullPath cheats
+    printfn "Cheats found: %d" cheats.Length
 
     let distanceToEndIndex = 
         let cheatIndex = 
@@ -185,7 +190,7 @@ let travel (matrix: char array2d) =
         |> readOnlyDict
 
     cheats 
-    |> List.map(fun cheat -> 
+    |> List.mapi(fun index cheat -> 
             let (deletedWallRow, deletedWallCol),_ = cheat
             let matrix' = Array2D.copy matrix
             matrix'.[deletedWallRow,deletedWallCol] <- '.'
@@ -196,7 +201,7 @@ let travel (matrix: char array2d) =
                 countPicoseconds initPosition 0 (fst cheat) [] distanceToEndIndex shortestDistanceSoFar matrix'
                 |> List.last
 
-            printfn "CHEAT #%A -> psecs save %d" cheat (fullPath.Length - 1 - pathWithCheat.Length)
+            printfn "CHEAT #%d %A -> psecs save %d" index cheat (fullPath.Length - 1 - pathWithCheat.Length)
             // pathWithCheat
             // |> List.iter (fun path -> 
             //     printfn "Path saved %d psecs" (fullPath.Length - path.Length - 1)
@@ -215,7 +220,7 @@ let travel (matrix: char array2d) =
 |> parse
 |> travel
 
-// "./input.actual"
-// |> parse
-// |> travel
+"./input.actual"
+|> parse
+|> travel
 
