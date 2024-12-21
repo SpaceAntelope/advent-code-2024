@@ -6,6 +6,14 @@ let shouldBe expected actual=
     then 
         failwithf "Comparison between expected %A and actual %A failed." expected actual
 
+let seqShouldBe expected actual= 
+    if Seq.length expected <> Seq.length actual then failwithf $"Seq comparison failed because element count doesn't match. Expected count is {Seq.length expected} while actual count is {Seq.length actual}"
+
+    Seq.zip expected actual
+    |> Seq.iteri (fun index (expected, actual) -> 
+            if expected <> actual 
+            then failwithf "Comparison between expected %A and actual %A failed at index %d." expected actual index)
+
 let matrixIndices matrix =
     let rows = matrix |> Array2D.length1
     let cols = matrix |> Array2D.length2
