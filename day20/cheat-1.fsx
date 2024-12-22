@@ -1,47 +1,34 @@
-open System
-open System.IO
-
 #load "../global.fsx"
 #load "./common.fsx"
 
-open Common
-open System.Diagnostics
+open System
 open System.Collections.Generic
+open Common
 
-let neighbors' (current: Point) =
-    let row,col = current
-    [   Up (row+1,col)
-        Dn (row-1,col)
-        Rt (row,col+1)
-        Lt (row,col-1) ]
+// let neighbors' (current: Point) =
+//     let row,col = current
+//     [   Up (row+1,col)
+//         Dn (row-1,col)
+//         Rt (row,col+1)
+//         Lt (row,col-1) ]
 
-
-// type X = A of int | B of int | C of int
-
-// let x = B 2
-
-// match x with
-// | A y
-// | B y 
-// | C y when y = 1 -> "l"
-
-let availableCheats' (neighbors: Neighbor list) (matrix: char array2d) : Cheat list =
-    neighbors 
-    |> List.filter (fun neighbor -> 
-        match neighbor with
-        | Up (r,c)
-        | Dn (r,c)
-        | Lt (r,c)
-        | Rt (r,c) when matrix.[r,c] = '#' -> true
-        | _ -> false )
-    |> List.choose (fun neighbor -> 
-        match neighbor with
-        | Up (row,col) when matrix.[row-1,col] <> '#'-> Some ((row,col),(row-1,col))
-        | Dn (row,col) when matrix.[row+1,col] <> '#'-> Some ((row,col),(row+1,col))
-        | Lt (row,col) when matrix.[row,col-1] <> '#'-> Some ((row,col),(row,col-1))
-        | Rt (row,col) when matrix.[row,col+1] <> '#'-> Some ((row,col),(row,col+1))
-        | x -> None        
-    )
+// let availableCheats' (neighbors: Neighbor list) (matrix: char array2d) : Cheat list =
+//     neighbors 
+//     |> List.filter (fun neighbor -> 
+//         match neighbor with
+//         | Up (r,c)
+//         | Dn (r,c)
+//         | Lt (r,c)
+//         | Rt (r,c) when matrix.[r,c] = '#' -> true
+//         | _ -> false )
+//     |> List.choose (fun neighbor -> 
+//         match neighbor with
+//         | Up (row,col) when matrix.[row-1,col] <> '#'-> Some ((row,col),(row-1,col))
+//         | Dn (row,col) when matrix.[row+1,col] <> '#'-> Some ((row,col),(row+1,col))
+//         | Lt (row,col) when matrix.[row,col-1] <> '#'-> Some ((row,col),(row,col-1))
+//         | Rt (row,col) when matrix.[row,col+1] <> '#'-> Some ((row,col),(row,col+1))
+//         | x -> None        
+//     )
 
 let availableCheats (matrix: char array2d) (current: Point) : Cheat list = 
     let row,col= current
@@ -63,24 +50,13 @@ let applyCheats (matrix: char array2d) (fullPath: Point list) =
         |> readOnlyDict
     
     let cheats = 
-        // let index = HashSet<Point>()
-        
         fullPath 
         |> List.collect (fun current -> 
             availableCheats matrix current
-            |> List.filter (fun (p1,p2) -> remainingPathCache.[current] > remainingPathCache.[p2])
-            )
+            |> List.filter (fun (p1,p2) -> remainingPathCache.[current] > remainingPathCache.[p2]))
         |> List.distinct
-        // |> List.filter (fun (pt1, p2) ->              
-        //     index.Add(pt1)) // prevent inverted direction cheats
-    
-    
     
     printfn "FUll Path Length: %d Cheats found: %d" fullPath.Length cheats.Length
-    // printfn "%A" fullPath
-    // printMaze matrix fullPath []
-    // printMaze matrix fullPath.[30..50] cheats
-    // Console.ReadLine() |> ignore
 
     fullPath
     |> List.mapi (fun index point ->
@@ -92,31 +68,17 @@ let applyCheats (matrix: char array2d) (fullPath: Point list) =
             let cheatStart,cheatEnd = activeCheat
             let cheatEndIndex = fullPath |> List.findIndex (fun pt -> pt = cheatEnd)
             
-            // if cheatEndIndex < index 
-            // then None
-            // else
             let path = fullPath.[..index]@[cheatStart]@fullPath.[cheatEndIndex..]
 
-            // printMaze matrix path [activeCheat] path.[index]
-            //printfn "Cheat: %A Path index: %d of %d Position: %A Saved: %d" activeCheat index fullPath.Length fullPath.[index] (fullPath.Length - path.Length)
-            // printfn "\n\n"
-            let diff = fullPath.Length - path.Length //index - remainingPathCache.[cheatEnd]
-            diff)
-                // if diff <> 0 
-                // then 
-                //     printMaze matrix path [activeCheat] path.[index]
-                //     Some diff 
-                // else
-                //     None)
-            //index + 1 + remainingPathCache.[cheatEnd]
-    ) 
-    // |> List.choose id   
+            let diff = fullPath.Length - path.Length
+            diff)) 
     |> List.collect id 
     |> List.filter (fun saved -> saved > 0)
     |> List.countBy id
     |> List.sortBy fst
     |> List.map (fun (saved,freq) -> { Saved = saved; CheatCount = freq })
 
+(* did not work out *)
 let exploreCheatingSpace (matrix: char array2d) (fullPath: Point list) = 
     let initPosition =
         fullPath        
