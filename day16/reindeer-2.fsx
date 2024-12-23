@@ -72,7 +72,7 @@ let travelAllPaths (matrix: char array2d) =
     let sw = Stopwatch()
     sw.Start()
 
-    let rec travel' (position: int*int) (dir: FacingDirection) (totalScore: int) depth (path: Map<int*int,FacingDirection>) =
+    let rec travel' (position: int*int) (dir: FacingDirection) (totalScore: int) depth (path: Map<int*int,|ction>) =
         let row,col = position
         let updatedPath = path |> Map.add(row,col) dir
 
