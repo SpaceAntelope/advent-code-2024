@@ -2,6 +2,8 @@ open System
 open System.IO
 open System.Text.RegularExpressions
 
+#load "../global.fsx"
+
 type Operators = AND | OR | XOR
 
 let parse path =    
@@ -20,7 +22,7 @@ let parse path =
         let unevalIndex = 
             uneval
             |> Array.map (fun line -> 
-                let m = Regex.Match(line,@"(?<s1>\w+) (?<op>AND|OR|XOR) (?<s3>\w+) \-\> (?<s4>\w+)")
+                let m = Regex.Match(line,@"(?<s1>\w+) (?<op>AND|OR|XOR) (?<s2>\w+) \-\> (?<s3>\w+)")
                 let s1 = m.Groups["s1"].Value
                 let op = 
                     match m.Groups["op"].Value with 
@@ -53,14 +55,19 @@ let parse path =
 
 
 parse "./input.example1"
+|> Global.tee "parsed"
 |> fun (evaluated, notEvaluated) ->
-        let mutable sentinel = false
         let mutable evaluated' = evaluated
         let mutable notEvaluated' = notEvaluated
-        while notEvaluated.Count = 0 do
-            notEvaluated
-            |> Seq.map (fun pair ->  
-                match pair.Value() with
-                | Some result -> evaluated' <- evaluated' |> Map.add pair.Key result
-                | None -> ()
-            )
+        while notEvaluated'.Count = 0 do
+            notEvaluated' <- 
+                notEvaluated' 
+                |> Map.filter(fun key f ->  
+                    match f() with
+                    | Some result -> 
+                        evaluated' <- evaluated' |> Map.add key result
+                        false
+                    | None -> true)
+
+        evaluated' |> printfn "%A"
+
