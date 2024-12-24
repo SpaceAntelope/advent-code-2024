@@ -6,8 +6,6 @@ open Common
 open System
 open System.IO
 
-let flip (x, y) = (y,x)
-
 let parse path = 
     path 
     |> File.ReadAllLines 
