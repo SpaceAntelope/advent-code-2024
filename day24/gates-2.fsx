@@ -170,9 +170,10 @@ let swaps =
 let adderCustomInputs= 
     (* 
         Test with numbers that use all 45 registers and are easy to make sense in binary.
-        If the result is expected to be almost all ones or all zeroes you can probably use
+        
+        If the result is expected to be almost all ones or all zeroes you can probably 
         concentrate your swaps to the regions where that stops being the case to come to 
-        a fully automated solution instead of a mostly manual one like this.
+        a fully automated solution instead of a mostly manual one like here.
 
         The numbers here in binary are:    
           011111111111111111111111111111111111111111111
