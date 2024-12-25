@@ -48,3 +48,13 @@ let manhattan (a: int*int) (b: int*int) =
     let r2,c2 = b
     Math.Abs(r2-r1) + Math.Abs(c2-c1)
 
+
+
+// let rec f n = 
+//     if n = 0L 
+//     then 1L
+//     else n * f (n-1L) 
+
+// let comboCount n r= (f n) / ((f r) * f(n-r))
+
+// comboCount 222L 8L

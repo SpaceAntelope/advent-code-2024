@@ -55,6 +55,7 @@ let parse path =
 let fireCircuit (evaluated: Map<string,int64>) (notEvaluated: Map<string,(Map<string,int64> -> int64 option)>) =
     let mutable evaluated' = evaluated
     let mutable notEvaluated' = notEvaluated
+    let orderOfApplication = ResizeArray<string>()
     while notEvaluated'.Count > 0 do
         
         notEvaluated' <- 
@@ -62,12 +63,15 @@ let fireCircuit (evaluated: Map<string,int64>) (notEvaluated: Map<string,(Map<st
             |> Map.filter(fun key f ->  
                 match f(evaluated') with
                 | Some result -> 
+                    orderOfApplication.Add key
                     evaluated' <- evaluated' |> Map.add key result
                     false
                 | None -> true)
         //printfn "%d %d" evaluated'.Count notEvaluated'.Count
         //evaluated'.Keys |> Seq.sort |> Seq.iter (fun key -> printfn "%A = %A" key evaluated'.[key])
     
+    File.WriteAllLines("./order-of-application.actual", orderOfApplication)
+
     evaluated'.Keys 
     |> Seq.filter (fun key-> key.StartsWith("z") )
     |> Seq.sortDescending
@@ -80,14 +84,14 @@ let fireCircuit (evaluated: Map<string,int64>) (notEvaluated: Map<string,(Map<st
 "./input.example1"
 |> parse        
 ||> fireCircuit
-|> printfn "%A"
+|> Global.shouldBe 4
 
 "./input.example2"
 |> parse        
 ||> fireCircuit
-|> printfn "%A"
+|> Global.shouldBe 2024
 
 "./input.actual"
 |> parse        
 ||> fireCircuit
-|> printfn "%A"
+|> printfn "The decimal it outputs on the wires starting with z is %d"
