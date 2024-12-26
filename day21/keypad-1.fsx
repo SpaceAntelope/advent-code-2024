@@ -2,6 +2,7 @@ open System
 open System.IO
 
 #load "../global.fsx"
+open System.Text.RegularExpressions
 
 (*
 +---+---+---+
@@ -112,33 +113,45 @@ let dir2num (code: string) =
         state + (moveOnNumpad a b) + "A") ""
     |> Global.tee ""
 let dir2dir (dir: string) =
-    ("A" + dir)
+    dir
     |> _.ToCharArray() 
-    |> Array.pairwise 
-    |> Array.fold (fun state (a,b) -> 
-        state 
-        + (moveOnDirPad a b) + "A" 
-        + (moveOnDirPad b 'A') + "A") ""
+    |> Array.fold (fun (state: string,lastTargetDigit: char) (nextTargetDigit: char) -> 
+       ( state + (moveOnDirPad lastTargetDigit nextTargetDigit) + "A"), nextTargetDigit) ("",'A')
+    |> fst
     |> Global.tee ""
 
+let calculateComplexity (code:string) (instructions:string) =
+    let codeNum = int <| Regex.Match(code, "\d+").Value
+    instructions.Length * codeNum
+
+let decode = dir2num>>dir2dir>>dir2dir
 [|
-    "029A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A"
-    "980A", "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A"
-    "179A", "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A"
-    "456A", "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A"
-    "379A", "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A"
+    "029A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A",  68*29
+    "980A", "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A", 60*980
+    "179A", "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A", 68*179
+    "456A", "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A", 64*456
+    "379A", "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A", 64*379
 |] 
 |> Array.iter (
-    fun (code, directions) ->
+    fun (code, directions, complexity) ->
         printfn "Trying to type %s..." code
         code 
-        |> dir2num
-        |> dir2dir
-        |> dir2dir
-        |> _.Length
-        |> Global.shouldBe directions.Length)
+        |> decode
+        |> fun actualDir -> 
+            actualDir.Length
+            |> Global.shouldBe directions.Length 
+            calculateComplexity code actualDir
+            |> Global.shouldBe complexity
+        )
 
-// "./input.example"
-// |> File.ReadAllLines
-// |> Seq.map (dir2num>>dir2dir>>dir2dir>>dir2dir)
-// |> Seq.iter(printfn "%s")
+"./input.example"
+|> File.ReadAllLines
+|> Array.map(fun code -> code, decode code)
+|> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
+|> Global.shouldBe 126384
+
+"./input.actual"
+|> File.ReadAllLines
+|> Array.map (fun code -> code, decode code)
+|> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
+|> printfn "The sum of the complexities of the five codes on our list is %d"
