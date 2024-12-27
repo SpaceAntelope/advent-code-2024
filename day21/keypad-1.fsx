@@ -2,7 +2,12 @@ open System
 open System.IO
 
 #load "../global.fsx"
+#load "./common.fsx"
+
+open Common
 open System.Text.RegularExpressions
+open System.Collections.Generic
+open System.Diagnostics
 
 (*
 +---+---+---+
@@ -22,109 +27,120 @@ open System.Text.RegularExpressions
 +---+---+---+    
 *)
 
-type Point = int*int
+// type Point = int*int
 
-let numpad = 
-    [|
-        [|'7';'8';'9'|]
-        [|'4';'5';'6'|]
-        [|'1';'2';'3'|]
-        [|'.';'0';'A'|]
-    |] |> array2D
+// let numpad = 
+//     [|
+//         [|'7';'8';'9'|]
+//         [|'4';'5';'6'|]
+//         [|'1';'2';'3'|]
+//         [|'.';'0';'A'|]
+//     |] |> array2D
 
-let arrowpad =
-    [|
-        [|'.';'^';'A'|]
-        [|'<';'v';'>'|]
-    |] |> array2D
+// let arrowpad =
+//     [|
+//         [|'.';'^';'A'|]
+//         [|'<';'v';'>'|]
+//     |] |> array2D
 
-let numpadIndex = 
-    numpad
-    |> Global.matrixIndices
-    |> Seq.map (fun (row,col) -> numpad.[row,col], (row,col))
-    |> readOnlyDict
+// let numpadIndex = 
+//     numpad
+//     |> Global.matrixIndices
+//     |> Seq.map (fun (row,col) -> numpad.[row,col], (row,col))
+//     |> readOnlyDict
 
-let dirpadIndex =
-    arrowpad
-    |> Global.matrixIndices
-    |> Seq.map (fun (row,col) -> arrowpad.[row,col], (row,col))
-    |> readOnlyDict
+// let dirpadIndex =
+//     arrowpad
+//     |> Global.matrixIndices
+//     |> Seq.map (fun (row,col) -> arrowpad.[row,col], (row,col))
+//     |> readOnlyDict
+
+// let testMovement =
+//     let moveArrowPad = moveMulti arrowpad
+//     moveArrowPad 'A' '<'
+//     |> Array.forall (fun path -> not <| path.StartsWith("<<"))
+//     |> Global.shouldBe true
+
+//     moveArrowPad '^' '<'
+//     |> Array.forall (fun path -> not <| path.StartsWith("<"))
+//     |> Global.shouldBe true
 
 
-let moveOnNumpad (startDigit: char) (lastDigit: char) =
-    // printf "%c -> %c " startDigit lastDigit
-    let row1,col1= numpadIndex[startDigit]
-    let row2,col2= numpadIndex[lastDigit]
 
-    let rep c count= "".PadRight(count,c)
-
-    let horizontalMovement = 
-        if col1 > col2 then rep '<' (col1-col2)
-        else rep '>' (col2-col1)
+let rec nextA (current: Point) (instr: string) =
+    // printfn "%A %s" current instr
+    if instr = "" 
+    then current
+    else 
+        let row,col = current
+        match instr.[0] with
+        | '^' -> row-1,col
+        | 'v' -> row+1,col
+        | '<' -> row,col-1
+        | '>' -> row,col+1
+        | x -> failwithf "%c is not an arrow" x
+        |> fun next -> nextA next (instr.Substring(1))
     
-    let verticalMovement = 
-        if row1 > row2 then rep '^' (row1-row2)
-        else rep 'v' (row2-row1)
-
-    if row2 = 3 && col1 = 0 
-    then horizontalMovement + verticalMovement    
-    else if row1 = 3 && col2 = 0
-    then verticalMovement + horizontalMovement
-    else horizontalMovement + verticalMovement
-    // |> fun x ->printfn "%s" x ; x
-
-
-let moveOnDirPad (startDigit: char) (lastDigit : char) =
-    // printf "%c -> %c " startDigit lastDigit
-    let row1,col1= dirpadIndex[startDigit]
-    let row2,col2= dirpadIndex[lastDigit]
-
-    let rep c count= "".PadRight(count,c)
-
-    let horizontalMovement = 
-        if col1 > col2 then rep '<' (col1-col2)
-        else rep '>' (col2-col1)
+let executeInstructions (pad : char array2d) (instructions: string) =
+    let startPoint = 
+        pad 
+        |> Global.matrixIndices 
+        |> Seq.find (fun (row,col) -> pad.[row,col] = 'A')
     
-    let verticalMovement = 
-        if row1 > row2 then rep '^' (row1-row2)
-        else rep 'v' (row2-row1)
-    
-    if row2 = 1 && col2 = 0 
-    then verticalMovement + horizontalMovement    
-    else horizontalMovement + verticalMovement
-    // |> fun x ->printfn "%s" x ; x
+    instructions
+    |> _.TrimEnd('A')
+    |> _.Split('A')
+    |> Array.fold (fun (cerrentPoint,state) current -> 
+        let nextRow,nextCol = nextA cerrentPoint current
+        (nextRow,nextCol), state + string pad.[nextRow, nextCol]) (startPoint,"")
+    |> snd
 
 
-// let keys = "0123456789A".ToCharArray()
-// keys 
-// |> Array.allPairs keys 
-// |> Array.map (fun (c1,c2) -> moveOnNumpad c1 c2)
+"<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A"
+|> Global.tee ""
+|> executeInstructions arrowpad
+|> Global.tee ""
+|> executeInstructions arrowpad
+|> Global.tee ""
+|> executeInstructions numpad
+|> Global.tee ""
+|> Global.shouldBe "379A"
 
-// let keys2 = "<>^vA".ToCharArray()
-// keys2
-// |> Array.allPairs keys2
-// |> Array.map (fun (c1,c2) -> moveOnDirPad c1 c2)
-let dir2num (code: string) = 
-    printfn "%s" code
-    ("A" + code)
-    |> _.ToCharArray() 
-    |> Array.pairwise 
-    |> Array.fold (fun state (a,b) -> 
-        state + (moveOnNumpad a b) + "A") ""
-    |> Global.tee ""
-let dir2dir (dir: string) =
-    dir
-    |> _.ToCharArray() 
-    |> Array.fold (fun (state: string,lastTargetDigit: char) (nextTargetDigit: char) -> 
-       ( state + (moveOnDirPad lastTargetDigit nextTargetDigit) + "A"), nextTargetDigit) ("",'A')
-    |> fst
-    |> Global.tee ""
 
-let calculateComplexity (code:string) (instructions:string) =
-    let codeNum = int <| Regex.Match(code, "\d+").Value
-    instructions.Length * codeNum
+let encodeNum = encode numpad
+let encodeArr = encode arrowpad
+let decode = encodeNum>>encodeArr>>encodeArr
+//(encode numpad)>>(encode arrowpad)>>(encode arrowpad)
 
-let decode = dir2num>>dir2dir>>dir2dir
+
+//executeInstructions numpad "<A<^A^^^AA" |> printfn "--- %A"
+
+decode "029A" 
+|> Global.tee "1"
+|> executeInstructions arrowpad
+|> Global.tee "2"
+|> executeInstructions arrowpad
+|> Global.tee "3"
+|> executeInstructions numpad
+|> Global.tee "4"
+
+// exit 555
+
+decode "379A"
+|> _.Length
+|> Global.shouldBe 64
+
+encode arrowpad "<A>Av<<AA>^AA>AvAA^A<vAAA>^A"
+|> _.Length
+|> printfn "%d"
+
+encode numpad "379A"
+|> _.Length
+|> printfn "%d"
+
+executeInstructions numpad "^A<<^^A>>AvvvA"
+|> printfn "%s"
+
 [|
     "029A", "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A",  68*29
     "980A", "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A", 60*980
@@ -140,9 +156,13 @@ let decode = dir2num>>dir2dir>>dir2dir
         |> fun actualDir -> 
             actualDir.Length
             |> Global.shouldBe directions.Length 
+           
             calculateComplexity code actualDir
             |> Global.shouldBe complexity
         )
+
+
+initEncode <- 0
 
 "./input.example"
 |> File.ReadAllLines
@@ -150,8 +170,38 @@ let decode = dir2num>>dir2dir>>dir2dir
 |> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
 |> Global.shouldBe 126384
 
+initEncode <- 0
+
+
+let decode2 = 
+    Array.create 2 (encode arrowpad)
+    |> Array.reduce (>>)
+    << (encode  numpad)
+
+let eNum = encode numpad 
+let eArr  = encode arrowpad 
+let decode3 code =
+    code 
+    |> eNum
+    |> eArr
+    |> eArr
+    |> eArr
+
+
 "./input.actual"
 |> File.ReadAllLines
-|> Array.map (fun code -> code, decode code)
+|> Array.map (fun code -> 
+    printf "Trying %s ... " code
+    let sw = Stopwatch()
+    sw.Start()
+    let result = decode3 code
+    sw.Stop()
+    printfn "done in %A" sw.Elapsed
+    code, result)
 |> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
 |> printfn "The sum of the complexities of the five codes on our list is %d"
+
+printfn $"Move cache hit: {moveCacheHit}"
+printfn $"Move cache miss: {moveCacheMiss}"
+printfn $"Encode cache hit: {encodeCacheHit}"
+printfn $"Encode cache miss: {encodeCacheMiss}"
