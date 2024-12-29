@@ -18,6 +18,8 @@ let checkIfPathContains (index: IReadOnlyDictionary<char,(int * int)>) (start: c
             | 'v' -> row+1,col
             | '<' -> row,col-1
             | '>' -> row,col+1
+            | x -> failwithf "%c is not a valid arrow button." x
+
         path
         |> Seq.scan (fun state current -> updatePoint current state ) (row,col) 
         |> Seq.exists (fun point -> point = contained)
