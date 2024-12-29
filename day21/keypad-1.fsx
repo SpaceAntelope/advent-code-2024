@@ -27,45 +27,6 @@ open System.Diagnostics
 +---+---+---+    
 *)
 
-// type Point = int*int
-
-// let numpad = 
-//     [|
-//         [|'7';'8';'9'|]
-//         [|'4';'5';'6'|]
-//         [|'1';'2';'3'|]
-//         [|'.';'0';'A'|]
-//     |] |> array2D
-
-// let arrowpad =
-//     [|
-//         [|'.';'^';'A'|]
-//         [|'<';'v';'>'|]
-//     |] |> array2D
-
-// let numpadIndex = 
-//     numpad
-//     |> Global.matrixIndices
-//     |> Seq.map (fun (row,col) -> numpad.[row,col], (row,col))
-//     |> readOnlyDict
-
-// let dirpadIndex =
-//     arrowpad
-//     |> Global.matrixIndices
-//     |> Seq.map (fun (row,col) -> arrowpad.[row,col], (row,col))
-//     |> readOnlyDict
-
-// let testMovement =
-//     let moveArrowPad = moveMulti arrowpad
-//     moveArrowPad 'A' '<'
-//     |> Array.forall (fun path -> not <| path.StartsWith("<<"))
-//     |> Global.shouldBe true
-
-//     moveArrowPad '^' '<'
-//     |> Array.forall (fun path -> not <| path.StartsWith("<"))
-//     |> Global.shouldBe true
-
-
 
 let rec nextA (current: Point) (instr: string) =
     // printfn "%A %s" current instr
@@ -124,7 +85,6 @@ decode "029A"
 |> executeInstructions numpad
 |> Global.tee "4"
 
-// exit 555
 
 decode "379A"
 |> _.Length
@@ -191,26 +151,6 @@ let decode2 =
     code, result)
 |> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
 |> printfn "The sum of the complexities of the five codes on our list is %d"
-
-
-let decode25 (code: string)= 
-    let e =
-        let e' = encode arrowpad
-        fun (depth:int) code -> e' code |> Global.tee $"%d{depth}"
-
-    code
-    |> e 1
-    |> e 2
-    |> e 3
-    |> e 4
-    |> e 5
-    |> e 6
-    //Array.create 14 (encode arrowpad)
-    //|> Array.reduce (>>)
-    
-decode25 ">"
-|> fun x -> printfn "Length %d" x.Length
-    //<< (encode  numpad)
 
 printfn $"Move cache hit: {moveCacheHit}"
 printfn $"Move cache miss: {moveCacheMiss}"
