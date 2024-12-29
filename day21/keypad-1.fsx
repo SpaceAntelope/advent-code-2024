@@ -178,15 +178,6 @@ let decode2 =
     |> Array.reduce (>>)
     << (encode  numpad)
 
-let eNum = encode numpad 
-let eArr  = encode arrowpad 
-let decode3 code =
-    code 
-    |> eNum
-    |> eArr
-    |> eArr
-    |> eArr
-
 
 "./input.actual"
 |> File.ReadAllLines
@@ -194,14 +185,36 @@ let decode3 code =
     printf "Trying %s ... " code
     let sw = Stopwatch()
     sw.Start()
-    let result = decode3 code
+    let result = decode2 code
     sw.Stop()
     printfn "done in %A" sw.Elapsed
     code, result)
 |> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
 |> printfn "The sum of the complexities of the five codes on our list is %d"
 
+
+let decode25 (code: string)= 
+    let e =
+        let e' = encode arrowpad
+        fun (depth:int) code -> e' code |> Global.tee $"%d{depth}"
+
+    code
+    |> e 1
+    |> e 2
+    |> e 3
+    |> e 4
+    |> e 5
+    |> e 6
+    //Array.create 14 (encode arrowpad)
+    //|> Array.reduce (>>)
+    
+decode25 ">"
+|> fun x -> printfn "Length %d" x.Length
+    //<< (encode  numpad)
+
 printfn $"Move cache hit: {moveCacheHit}"
 printfn $"Move cache miss: {moveCacheMiss}"
 printfn $"Encode cache hit: {encodeCacheHit}"
 printfn $"Encode cache miss: {encodeCacheMiss}"
+printfn $"Move cache count: {moveCache.Count}"
+// moveCache |> Seq.iteri (printfn "%d %A")

@@ -1,9 +1,11 @@
 open System
 open System.IO
+open System.Security.Cryptography
 
 #load "../global.fsx"
 open System.Text.RegularExpressions
 open System.Collections.Generic
+open System.Text
 
 (*
 +---+---+---+
@@ -156,10 +158,19 @@ let encode' (pad: char array2d) (instructions: string) =
     |> evalInstructionsButFilterForMinLength
     // |> Global.tee ""
 
-let mutable encodeCache = Map.empty<char*string*string,string>
+// let mutable encodeCache = Map.empty<char*string*string,string>
+//let mutable encodeCache = Map.empty<string,string>
+let mutable encodeCache = Dictionary<string,string>()
 
 let mutable initEncode = 0
 
+let hash =
+    let sha256 = SHA256.Create()
+    
+    fun (key: string) -> 
+        Encoding.UTF8.GetBytes(key) 
+        |> sha256.ComputeHash 
+        |> Convert.ToHexString        
 let encode (pad: char array2d)  =
     initEncode <- initEncode + 1
     printfn "encode initialized %d times" initEncode
@@ -168,41 +179,41 @@ let encode (pad: char array2d)  =
     let rec search (path: string) (remainingInstructions: string) (lastButton: char) =
         if remainingInstructions = ""
         then
-            let evaluation = evalInstructions path
-            if evaluation > maxPathScore
-            then
-                maxPathScore <- evaluation
+            // let evaluation = evalInstructions path
+            // if evaluation > maxPathScore
+            // then
+            //     maxPathScore <- evaluation
                 // printfn "Path length: %d" path.Length
                 path
-            else ""
+            // else ""
         else
             let prevBtn  = if path = "" then 'A' else lastButton// path.[path.Length-1] //ToCharArray() |> Array.last
             let nextBtn = remainingInstructions.[0]
             
             let nextInstruction =
                 let moveCacheKey = (pad.[0,0], prevBtn, nextBtn)
-                if moveCache.ContainsKey moveCacheKey |> not
-                then 
-                    moveCacheMiss <- moveCacheMiss + 1L
-                    moveCache <- moveCache |> Map.add moveCacheKey (move prevBtn nextBtn)
-                else 
+                match moveCache |> Map.tryFind moveCacheKey with
+                | Some x -> 
                     moveCacheHit <- moveCacheHit + 1L
-                
-                moveCache.[moveCacheKey]
+                    x
+                | None -> 
+                    moveCacheMiss <- moveCacheMiss + 1L
+                    moveCache <- moveCache |> Map.add moveCacheKey (move prevBtn nextBtn)                
+                    moveCache.[moveCacheKey]
 
             let nextPath = path + nextInstruction + "A"
             let nextRemainingInstructions  = remainingInstructions.Substring(1)
 
-            let encodeCacheKey = pad.[0,0], nextPath, nextRemainingInstructions
-            if encodeCache.ContainsKey encodeCacheKey |> not
-            then 
-                encodeCacheMiss <- encodeCacheMiss + 1L
-                encodeCache <- encodeCache |> Map.add encodeCacheKey (search nextPath nextRemainingInstructions nextBtn)
-            else encodeCacheHit <- encodeCacheHit + 1L
+            // let encodeCacheKey = sprintf "%c %s %s" pad.[0,0] nextPath (nextRemainingInstructions.Substring(Math.Min(nextRemainingInstructions.Length,50))) // |> hash
+            // if encodeCache.ContainsKey encodeCacheKey |> not
+            // then 
+            //     encodeCacheMiss <- encodeCacheMiss + 1L
+            //     encodeCache.Add(encodeCacheKey, (search nextPath nextRemainingInstructions nextBtn))
+            //     // encodeCache <- encodeCache |> Map.add encodeCacheKey (search nextPath nextRemainingInstructions nextBtn)
+            // else encodeCacheHit <- encodeCacheHit + 1L
             
-            encodeCache.[encodeCacheKey]
-            
-            //search nextPath (remainingInstructions.Substring(1)) nextBtn
+            // encodeCache.[encodeCacheKey]
+            search nextPath nextRemainingInstructions nextBtn
             
             //move prev instructions.[depth] 
             // |> Array.collect (fun nextInstr -> 
