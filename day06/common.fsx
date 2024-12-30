@@ -1,14 +1,16 @@
 open System.IO
 open System.Text.RegularExpressions
 
+#load "../global.fsx"
+
 let parseData path =
     path
     |> File.ReadAllLines
     |> Array.map _.ToCharArray()
     |> array2D
 
-type Point = int*int
-type Path = Point list
+type Path = Global.Point list
+
 
 let printMatrix (obstacles : Path) (customObstacles: Path) (patrol: Path) 
     (position: int*int) (direction: int) (size: int*int) = 
@@ -23,7 +25,6 @@ let printMatrix (obstacles : Path) (customObstacles: Path) (patrol: Path)
     |> sprintf "%A"
     |> fun str -> Regex.Replace(str, @"['\[\];]", "")
     |> printfn " %s\n"
-
 let tryMinBy fn (source : 't seq) =
     match source with
     | seq when seq |> Seq.isEmpty -> None

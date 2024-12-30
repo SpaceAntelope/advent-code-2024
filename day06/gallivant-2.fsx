@@ -6,6 +6,8 @@ open System.Text.RegularExpressions
 #load "./common.fsx"
 
 open Common
+open Global
+open System.Collections.Generic
 
 // let parseData path =
 //     path
@@ -67,6 +69,7 @@ open Common
 
 //         ]
 
+type Dir = Up | Dn | Lt | Rt
 
 
 let getObstacles (matrix : char array2d) =
@@ -81,28 +84,35 @@ let getObstacles (matrix : char array2d) =
 // let rowCount= matrix |> Array2D.length1
 // let colCount= matrix |> Array2D.length2
 
-// type Dir = Up | Dn | Lt | Rt
+
 
 
 
 let rotateRight currentDir = 
     match currentDir with
-    | 8 -> 6
-    | 6 -> 2
-    | 2 -> 4
-    | 4 -> 8
+    | Up -> Rt
+    | Rt -> Dn
+    | Dn -> Lt
+    | Lt -> Up
+    
+let rotateLeft currentDir = 
+    match currentDir with
+    | Up -> Lt
+    | Rt -> Up
+    | Dn -> Rt
+    | Lt -> Dn
     
 
 // let obstacles = getObstacles matrix
 
-let positionWhenFacingObstacle (row,col) (dir:int) =
+let positionWhenFacingObstacle (obsRow,obsCol) (dir:Dir) =
     match dir with
-    | 8 -> row+1,col
-    | 2 -> row-1,col
-    | 4 -> row,col+1
-    | 6 -> row,col-1
+    | Up -> obsRow+1,obsCol
+    | Dn -> obsRow-1,obsCol
+    | Lt -> obsRow,obsCol+1
+    | Rt -> obsRow,obsCol-1
 
-let isObstacle x = x = '#'
+let inline isObstacle x = x = '#'
 
 // for (row,col) in obstacles do
 //     for lookingDir in [8;6;2;4] do
@@ -126,87 +136,338 @@ let isObstacle x = x = '#'
 //                 currentCol <- nextCol
 //             | None -> 
 
-let findDir (node1: Point) (node2: Point) =
-    match (node1, node2) with
-    | (r1,c1),(r2,c2) when c1 = c2 && r1 > r2 -> 8
-    | (r1,c1),(r2,c2) when c1 = c2 && r1 < r2 -> 2
-    | (r1,c1),(r2,c2) when c1 > c2 && r1 = r2 -> 4
-    | (r1,c1),(r2,c2) when c1 < c2 && r1 = r2 -> 6
-    | _ -> failwithf "%A -> %A: We're not doing diagonals at this time." node1 node2
+// let findDir (node1: Point) (node2: Point) =
+//     match (node1, node2) with
+//     | (r1,c1),(r2,c2) when c1 = c2 && r1 > r2 -> 8
+//     | (r1,c1),(r2,c2) when c1 = c2 && r1 < r2 -> 2
+//     | (r1,c1),(r2,c2) when c1 > c2 && r1 = r2 -> 4
+//     | (r1,c1),(r2,c2) when c1 < c2 && r1 = r2 -> 6
+//     | _ -> failwithf "%A -> %A: We're not doing diagonals at this time." node1 node2
 
-let findDirObs (o1 :Point) (o2: Point) =
-    match o1,o2 with
-    | (r1,c1),(r2,c2) when c2-c1 = 1 -> 2
-    | (r1,c1),(r2,c2) when c1-c2 = 1 -> 8
-    | (r1,c1),(r2,c2) when r2-r1 = 1 -> 6
-    | (r1,c1),(r2,c2) when r1-r2 = 1 -> 4
+// let findDirObs (o1 :Point) (o2: Point) =
+//     match o1,o2 with
+//     | (r1,c1),(r2,c2) when c2-c1 = 1 -> 2
+//     | (r1,c1),(r2,c2) when c1-c2 = 1 -> 8
+//     | (r1,c1),(r2,c2) when r2-r1 = 1 -> 6
+//     | (r1,c1),(r2,c2) when r1-r2 = 1 -> 4
 
+
+
+let next current dir =
+    let row,col = current
+    
+    match dir with
+    | Up -> row-1,col
+    | Dn -> row+1,col
+    | Rt -> row,col+1
+    | Lt -> row,col-1
+
+let reverseDir dir =
+    match dir with
+    | Up -> Dn
+    | Dn -> Up
+    | Rt -> Lt
+    | Lt -> Rt
+
+let traceStraightPathUntilObstacleOrBoundary pos dir matrix : Path =    
+    let size = Global.matrixSize matrix
+
+    let rec trace current =
+        let row ,col = current
+        if Global.isOutOfBounds size current || isObstacle matrix.[row,col]
+        then []
+        else 
+            let nextPoint = next current dir
+            
+            [ nextPoint; yield! trace nextPoint ]
+
+    trace pos
+
+let mutable indexCache = Map.empty<char[,], Map<Point*Dir,Point>>
+let pos2obsIndex (matrix: char array2d)=
+    match indexCache |> Map.tryFind matrix with
+    | None -> 
+        let idx =
+            [   for obs in getObstacles matrix do
+                    for dir in [Up;Rt;Dn;Lt] do
+                        let row,col = positionWhenFacingObstacle obs dir
+                        yield!                    
+                            traceStraightPathUntilObstacleOrBoundary (row,col) (reverseDir dir) matrix
+                            |> List.map (fun pathPoint -> (pathPoint,dir),obs   )   ]
+            |> Map
+        indexCache <- indexCache |> Map.add matrix idx
+        idx
+    | Some idx -> idx
+
+let pathBetweenPoints ptA ptB = 
+    let rowA,colA = ptA
+    let rowB, colB = ptB
+
+    match rowA - rowB, colA - colB with
+    | rowDiff, 0 when rowDiff > 0 -> [rowA.. -1 ..rowB] |> List.map (fun row -> row, colA) 
+    | rowDiff, 0 when rowDiff < 0 -> [rowA..rowB] |> List.map (fun row -> row, colA)
+    | 0, colDiff when colDiff > 0 -> [colA.. -1 ..colB] |> List.map (fun col -> rowA, col)
+    | 0, colDiff when colDiff < 0 -> [colA..colB] |> List.map (fun col -> rowA, col)
+    | 0, 0 -> failwithf "Pointdiff %A indicates no movement which shouldn't ever happen." (0,0)
+    | rowDiff,colDiff -> failwithf "Pointdiff %A indicates diagonal movement which is not allowed." (rowDiff,colDiff)
+    // |> Global.tee $"%A{ptA} %A{ptB} {rowA - rowB} {colA - colB}"
+
+let pathBetweenPointsExcludeLast ptA ptB =
+    let path = pathBetweenPoints ptA ptB
+    path.[..path.Length-2]
 
 
 let tracePath matrix =
-    //let rowCount, colCount = Global.matrixSize matrix
-
-    // let mutable currentDirection = 8
-
-    let obstacles =
-        matrix
-        |> Global.matrixIndices
-        |> Seq.filter (fun (row,col) -> matrix.[row,col] = '#' )
-        |> List.ofSeq
-
-    // let initialPosition = 
-    //     matrix
-    //     |> Global.matrixIndices
-    //     |> Seq.find (fun (row,col) -> matrix.[row,col] = '^' )
+   
+    let nextObstacleIndex = pos2obsIndex matrix
+    
     let rec trace (currentPosition) (currentDirection) =
-        let currentRow, currentColumn = currentPosition
-// fun (initialPosition: Point) (initialDirection: int) ->
-//     List.unfold (fun ((currentRow, currentColumn), currentDirection, currentPath) -> 
+        match nextObstacleIndex |> Map.tryFind (currentPosition, currentDirection) with
+        | None -> seq{ yield! traceStraightPathUntilObstacleOrBoundary currentPosition currentDirection matrix }
+        | Some obstacleAhead -> 
+            let nextPosition = positionWhenFacingObstacle obstacleAhead currentDirection
+            let path = pathBetweenPointsExcludeLast currentPosition nextPosition
+            let nextDirection = rotateRight currentDirection
+            seq {   
+                yield! path 
+                yield! trace nextPosition nextDirection }
+   
+    fun pos dir -> trace pos dir
+
+        // match cache |> Map.tryFind (initPos,initDir) with
+        // | Some itIs -> itIs
+        // | None ->
+        //     let result = 
+        //     cache <- cache |> Map.add (initPos,initDir) result
+        //     result
+
+let printMaze (maze: char array2d) (path: Point seq) (obstacles: Point seq) (init: (Point*Dir) seq) =  
+    let (rows,cols) = Global.matrixSize maze
+    let obsSet = obstacles |>  Set.ofSeq
+    let pathSet = path |> Set.ofSeq
+    let initSet = init |> readOnlyDict
+    let printColIndex () = 
+        [|0..cols-1|] 
+        |> Array.map (sprintf "%03d") 
+        |> Array.map _.ToCharArray() 
+        |> Array.transpose 
+        |> Array.iter (fun digits-> 
+            printf "   "
+            digits |> Array.iter(printf " %c")
+            printfn ""
+        )
+
+    // let path' = path |> Array.ofSeq
+
     
 
-        match currentDirection with
-        | 8 -> 
-            obstacles 
-            |> Seq.filter (fun (row,col) -> row < currentRow && col = currentColumn ) 
-            |> tryMaxBy fst
-        | 2 -> 
-            obstacles 
-            |> Seq.filter (fun (row,col) -> row > currentRow && col = currentColumn ) 
-            |> tryMinBy fst            
-        | 4 ->
-            obstacles 
-            |> Seq.filter (fun (row,col) -> row = currentRow && col < currentColumn ) 
-            |> tryMaxBy snd            
-        | 6 ->
-            obstacles 
-            |> Seq.filter (fun (row,col) -> row = currentRow && col > currentColumn ) 
-            |> tryMinBy snd
-        |> Option.map (fun obstacle -> 
-            let (nextRow, nextCol) = positionWhenFacingObstacle obstacle currentDirection
-            let nextDir = rotateRight currentDirection
-            let nextPath = 
-                match currentRow - nextRow, currentColumn - nextCol with
-                | rowDiff, colDiff when rowDiff < 0 && colDiff = 0 -> [currentRow.. -1 ..nextRow] |> List.map (fun row -> row, nextCol)
-                | rowDiff, colDiff when rowDiff > 0 && colDiff = 0 -> [currentRow..nextRow] |> List.map (fun row -> row, nextCol)
-                | rowDiff, colDiff when colDiff < 0 && rowDiff = 0 -> [currentColumn.. -1 ..nextCol] |> List.map (fun col -> currentRow, col)
-                | rowDiff, colDiff when colDiff > 0 && rowDiff = 0 -> [currentColumn..nextCol] |> List.map (fun col -> currentRow, col)
-            // (obstacle, nextPath), ((nextRow,nextCol),nextDir))                    
-            nextPath, ((nextRow,nextCol),nextDir, ))
-    ) (initialPosition, initialDirection, [])
+    printColIndex()
+    for row in 0..rows-1 do
+        printf "%03d " row
+        for col in 0..cols-1 do                    
+            if initSet.ContainsKey (row,col) 
+            then //'⦾' //⦿
+                match initSet[row,col] with 
+                | Up -> '▲'
+                | Dn -> '▼'
+                | Lt -> '◄'
+                | Rt -> '►'
+            else if obsSet.Contains (row,col)
+            then '░'
+            else if pathSet.Contains(row,col)
+            then '▇'
+            else maze.[row,col]
+            |> printf "%c "
+        printf "%03d" row
+        if row < rows then printfn ""
+    printColIndex()
+    printfn ""
+   
+    
 
-let matrix= 
-    "./input.example"
-    |> parseData
+let isCycle matrix =
+   
+    let nextObstacleIndex = pos2obsIndex matrix
+    
+    // let mutable cache = Map.empty<Point*Dir,bool>
 
-let initialPosition = 
-    matrix
-    |> Global.matrixIndices
-    |> Seq.find (fun (row,col) -> matrix.[row,col] = '^' )
+    fun initPos initDir -> 
+        let mutable pathCounter = 0
+        let visited = HashSet<Point*Dir>()
 
-// let (obstacles,path) =
-let x = tracePath matrix initialPosition 8
+        let x d s = 
+            pathCounter <- pathCounter + (s |> List.length)
+            s |> Seq.iter (fun pt -> visited.Add(pt,d) |> ignore)
+            s
+        // let mutable visited = Set.empty<Point*Dir>
+        // visited.Add(initPos,initDir) |> ignore
+
+        let rec trace (currentPosition) (currentDirection) =
+            // printf "Count cycles %A %A " currentPosition currentDirection
+
+            if pathCounter > 10000
+            then
+                printfn "Problem at cycle starting with %A %A" initPos initDir
+                // printfn "visited: %d" visited.Count 
+                // printMaze matrix (visited |> Seq.map fst) (getObstacles matrix) [initPos,initDir]
+                // false 
+                true
+            else
+                match nextObstacleIndex |> Map.tryFind (currentPosition, currentDirection) with
+                | None ->
+                    visited.Add(currentPosition,currentDirection) |> ignore
+                    traceStraightPathUntilObstacleOrBoundary currentPosition currentDirection matrix
+                    //not (visited.Add(currentPosition, rotateRight currentDirection)                    )
+                    //&& traceStraightPathUntilObstacleOrBoundary currentPosition currentDirection matrix
+                    |> x currentDirection
+                    |> List.contains initPos
+                    //|> List.exists (fun point -> not <| visited.Add(point, currentDirection))
+                    
+                | Some obstacleAhead -> 
+                    // printfn "Some"
+                    let nextPosition = positionWhenFacingObstacle obstacleAhead currentDirection
+                    let nextDirection = rotateRight currentDirection
+                    let result =
+                        if nextPosition = initPos 
+                        then true 
+                        else 
+                            pathBetweenPointsExcludeLast currentPosition nextPosition
+                            |> x currentDirection
+                            |> List.contains initPos
+                            && (currentPosition <> initPos)
+                            // |> List.exists (fun point -> not <| visited.Add(point, nextDirection))
+                        // |> List.contains initPos 
+                        // && currentDirection = (rotateLeft initDir)
+                    
+                    result || trace nextPosition nextDirection 
+        
+        let result = trace initPos initDir    
+        // printfn "visited: %d -- %b" visited.Count result
+        // printMaze matrix (visited |> Seq.map fst) (getObstacles matrix) [initPos,initDir]
+        result
+
+let sanityTest filepath expected =
+    let matrix= 
+        filepath
+        |> parseData
+
+    let initialPosition = 
+        matrix
+        |> Global.matrixIndices
+        |> Seq.find (fun (row,col) -> matrix.[row,col] = '^' )
+
+    let pathTracer = tracePath matrix
+
+    let path = pathTracer initialPosition Up
+    
+    // printMatrix (getObstacles matrix |> List.ofSeq) [] path initialPosition 8 (Global.matrixSize matrix)
+
+    path
+    |> List.ofSeq
+    |> List.distinct
+    |> List.length
+    |> Global.shouldBe expected
+
+    printfn "%s pt1 test successful" filepath
+
+sanityTest "./input.example" 41
+sanityTest "./input.actual" 4758
+
+let testSpecialCyclicalPaths() =
+    let matrix= 
+        "./input.actual"
+        |> parseData
 
 
+    let pathTracer = tracePath matrix
+    let initPos = (49,56)
+    let initDir = Up
+
+    let path = 
+        pathTracer initPos Up |> Seq.take 200
+        |> Seq.append (pathTracer (34,111) Lt |> Seq.take 200)
+        |> Seq.append (pathTracer (26,109) Dn |> Seq.take 200)
+        |> Seq.append (pathTracer (56,90) Lt |> Seq.take 200)
+        |> Seq.append (pathTracer (21,127) Dn |> Seq.take 200)
+
+    [   (34,111), Lt
+        (26,109), Dn
+        (56,90), Lt
+        (21,127), Dn ]
+    |> printMaze matrix path (getObstacles matrix |> List.ofSeq) 
+
+
+let countPossibeCustomObstructions matrix =
+   
+    let nextObstacleIndex = pos2obsIndex matrix
+    
+    let hasObstacleToTheRight dir pos =         
+        nextObstacleIndex |> Map.tryFind (pos, (rotateRight dir))
+        // |> Option.map (fun _ -> pos)
+        // |> Global.tee $"Obs> {dir} %A{pos}"
+
+    let cycleTracer = isCycle matrix    
+
+    let countCycles dir (path: Path) =
+        path // skip last before obstacle because we are going that way anyway
+        |> List.filter ((hasObstacleToTheRight dir)>>Option.isSome) 
+        |> List.filter (fun pos -> cycleTracer pos (rotateRight dir))
+        |> List.length
+
+    let rec trace (currentPosition) (currentDirection) =
+        // printf  "%A %A " currentPosition currentDirection
+        match nextObstacleIndex |> Map.tryFind (currentPosition, currentDirection) with
+        | None -> 
+            // printfn "None"
+            traceStraightPathUntilObstacleOrBoundary currentPosition currentDirection matrix
+            |> countCycles currentDirection
+        | Some obstacleAhead -> 
+            let nextPosition = positionWhenFacingObstacle obstacleAhead currentDirection
+            let nextDirection = rotateRight currentDirection
+            // printf "Some %A %A " nextPosition nextDirection
+            let currentPathCycles = 
+                pathBetweenPointsExcludeLast currentPosition nextPosition
+                |> countCycles currentDirection
+            // printfn "%d" currentPathCycles
+            currentPathCycles + trace nextPosition nextDirection
+   
+    fun pos dir -> trace pos dir
+
+// let x = pathTracer initialPosition Up
+
+"./input.example"
+|> Common.parseData
+|> fun matrix -> 
+    let initialPosition = 
+        matrix
+        |> Global.matrixIndices
+        |> Seq.find (fun (row,col) -> matrix.[row,col] = '^' )
+    
+    Common.printMatrix (getObstacles matrix |> List.ofSeq) [] [] initialPosition 8 (Global.matrixSize matrix)
+    
+    countPossibeCustomObstructions matrix initialPosition Up
+|> Global.shouldBe 6
+
+// exit 666
+
+"./input.actual"
+|> Common.parseData
+|> fun matrix -> 
+    let initialPosition = 
+        matrix
+        |> Global.matrixIndices
+        |> Seq.find (fun (row,col) -> matrix.[row,col] = '^' )
+    
+    countPossibeCustomObstructions matrix initialPosition Up
+|> printfn "Found %d different positions you could choose for the obstruction."
+
+// |> patrolLength
+// |> Global.shouldBe 41
+
+// "./input.actual"
+// |> Common.parseData
+// |> patrolLength
+// |> printfn "The total length of the patrol is %A" 
 
 // let findAlmostCyclicalPaths (matrix : char array2d) (obstacles: Path) =
 //     let rowCount= matrix |> Array2D.length1

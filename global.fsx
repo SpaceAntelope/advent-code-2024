@@ -1,6 +1,8 @@
 open System
 open System.Text.RegularExpressions
 
+type Point = int*int
+
 let shouldBe expected actual= 
     if expected <> actual 
     then 
@@ -53,6 +55,15 @@ let manhattan (a: int*int) (b: int*int) =
     let r2,c2 = b
     Math.Abs(r2-r1) + Math.Abs(c2-c1)
 
+let isOutOfBounds (size: int*int) (point: Point) =
+    let rows,cols = size
+    let row,col = point
+
+    row > rows-1 || col > cols-1 || col < 0 || row < 0
+
+
+//[ for row in -1..6 do for col in -1..6 do (row,col) ,isOutOfBounds (5,5) (row,col) ]
+// |> List.filter (fun (pt,isOut) -> isOut = true) |> List.map fst
 
 
 // let rec f n = 
@@ -63,3 +74,53 @@ let manhattan (a: int*int) (b: int*int) =
 // let comboCount n r= (f n) / ((f r) * f(n-r))
 
 // comboCount 222L 8L
+
+
+// let printMaze (maze: char array2d) (iconRules : Map<string, Set<int*int>*char>) =
+//     let (rows,cols) = matrixSize maze
+//     // let obsSet = obstacles |>  Set.ofSeq
+//     // let pathSet = path |> Set.ofSeq
+//     // let initSet = init |> readOnlyDict
+//     let printColIndex () = 
+//         [|0..cols-1|] 
+//         |> Array.map (sprintf "%03d") 
+//         |> Array.map _.ToCharArray() 
+//         |> Array.transpose 
+//         |> Array.iter (fun digits-> 
+//             printf "   "
+//             digits |> Array.iter(printf " %c")
+//             printfn ""
+//         )
+
+//     // let path' = path |> Array.ofSeq
+
+    
+
+//     printColIndex()
+//     for row in 0..rows-1 do
+//         printf "%03d " row
+//         for col in 0..cols-1 do                    
+//             iconRules 
+//             |> Map.fold(fun key (cells,icon) -> 
+//                 if Set.contains (row,col) cells
+//                 then icon
+//             )
+//             if initSet.ContainsKey (row,col) 
+//             then //'⦾' //⦿
+//                 match initSet[row,col] with 
+//                 | Up -> '▲'
+//                 | Dn -> '▼'
+//                 | Lt -> '◄'
+//                 | Rt -> '►'
+//             else if obsSet.Contains (row,col)
+//             then '░'
+//             else if pathSet.Contains(row,col)
+//             then '▇'
+//             else maze.[row,col]
+//             |> printf "%c "
+//         printf "%03d" row
+//         if row < rows then printfn ""
+//     printColIndex()
+//     printfn ""
+   
+    
