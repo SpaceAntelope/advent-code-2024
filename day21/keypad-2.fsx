@@ -77,7 +77,7 @@ let move (pad : char array2d) =
                 if row1 > row2 then rep '^' (row1-row2)
                 else rep 'v' (row2-row1)
             
-            (* Consecutive identical digits will always beat zig-zagging paths.
+            (* Consecutive identical digits will always beat zig-zagging paths 
              * Since arrow pad only has two rows this can probably be reduced further.
              *)
             [   for i in 0..horizontalMovement.Length-1 do
@@ -169,14 +169,14 @@ let decode (code: string) =
 "./input.example"
 |> File.ReadAllLines
 |> Array.map(fun code -> code, decode code)
-|> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
+|> Array.sumBy(fun (code, length) -> calculateComplexity code length)
 |> Global.shouldBeAndTee 126384
 |> printfn "The sum of the complexities of the five example codes is %d"
 
 "./input.actual"
 |> File.ReadAllLines
 |> Array.map(fun code -> code, decode code)
-|> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
+|> Array.sumBy(fun (code, length) -> calculateComplexity code length)
 |> printfn "The sum of the complexities of the five puzzle input codes at 2 robots removed is %d"
 
 let decode25 (code: string) = 
@@ -189,5 +189,5 @@ let decode25 (code: string) =
 "./input.actual"
 |> File.ReadAllLines
 |> Array.map(fun code -> code, decode25 code)
-|> Array.sumBy(fun (code, instr) -> calculateComplexity code instr)
+|> Array.sumBy(fun (code, length) -> calculateComplexity code length)
 |> printfn "The sum of the complexities of the five puzzle input codes at 25 robots removed is %d"
