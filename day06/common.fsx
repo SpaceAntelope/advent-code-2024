@@ -7,7 +7,8 @@ let parseData path =
     |> Array.map _.ToCharArray()
     |> array2D
 
-type Path = (int*int) list
+type Point = int*int
+type Path = Point list
 
 let printMatrix (obstacles : Path) (customObstacles: Path) (patrol: Path) 
     (position: int*int) (direction: int) (size: int*int) = 
@@ -23,12 +24,12 @@ let printMatrix (obstacles : Path) (customObstacles: Path) (patrol: Path)
     |> fun str -> Regex.Replace(str, @"['\[\];]", "")
     |> printfn " %s\n"
 
-let tryMinBy fn (source : 't list) =
+let tryMinBy fn (source : 't seq) =
     match source with
-    | [] -> None
-    | l -> Some (List.minBy fn l)
+    | seq when seq |> Seq.isEmpty -> None
+    | seq -> Some (Seq.minBy fn seq)
 
-let tryMaxBy fn (source : 't list) =
+let tryMaxBy fn (source : 't seq) =
     match source with
-    | [] -> None
-    | l -> Some (List.maxBy fn l)
+    | seq when seq |> Seq.isEmpty -> None
+    | seq -> Some (Seq.maxBy fn seq)

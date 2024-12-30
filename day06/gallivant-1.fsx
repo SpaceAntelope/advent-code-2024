@@ -4,7 +4,7 @@ open System.IO
 #load "../global.fsx"
 #load "./common.fsx"
 
-let patrollLength matrix =
+let patrolLength matrix =
     let mutable currentDirection = 8
     
     let rowCount= matrix |> Array2D.length1
@@ -13,12 +13,12 @@ let patrollLength matrix =
     let obstacles =
         matrix
         |> Global.matrixIndices
-        |> List.filter (fun (row,col) -> matrix.[row,col] = '#' )
+        |> Seq.filter (fun (row,col) -> matrix.[row,col] = '#' )
 
     let initialPosition = 
         matrix
         |> Global.matrixIndices
-        |> List.find (fun (row,col) -> matrix.[row,col] = '^' )
+        |> Seq.find (fun (row,col) -> matrix.[row,col] = '^' )
 
     let mutable (currentRow, currentCol) = initialPosition        
 
@@ -32,7 +32,7 @@ let patrollLength matrix =
                 | 8 -> 
                     currentDirection <- 6
                     obstacles 
-                    |> List.filter (fun (row,col) -> row < currentRow && col = currentCol ) 
+                    |> Seq.filter (fun (row,col) -> row < currentRow && col = currentCol ) 
                     |> Common.tryMaxBy fst
                     |> function
                     | None ->   
@@ -45,7 +45,7 @@ let patrollLength matrix =
                 | 2 -> 
                     currentDirection <- 4
                     obstacles 
-                    |> List.filter (fun (row,col) -> row > currentRow && col = currentCol ) 
+                    |> Seq.filter (fun (row,col) -> row > currentRow && col = currentCol ) 
                     |> Common.tryMinBy fst
                     |> function
                     | None -> 
@@ -58,7 +58,7 @@ let patrollLength matrix =
                 | 4 ->
                     currentDirection <- 8
                     obstacles 
-                    |> List.filter (fun (row,col) -> row = currentRow && col < currentCol ) 
+                    |> Seq.filter (fun (row,col) -> row = currentRow && col < currentCol ) 
                     |> Common.tryMaxBy snd
                     |> function
                     | None -> 
@@ -71,7 +71,7 @@ let patrollLength matrix =
                 | 6 ->
                     currentDirection <- 2
                     obstacles 
-                    |> List.filter (fun (row,col) -> row = currentRow && col > currentCol ) 
+                    |> Seq.filter (fun (row,col) -> row = currentRow && col > currentCol ) 
                     |> Common.tryMinBy snd
                     |> function 
                     | None ->
@@ -97,10 +97,10 @@ let patrollLength matrix =
 
 "./input.example"
 |> Common.parseData
-|> patrollLength
+|> patrolLength
 |> Global.shouldBe 41
 
 "./input.actual"
 |> Common.parseData
-|> patrollLength
+|> patrolLength
 |> printfn "The total length of the patrol is %A" 
