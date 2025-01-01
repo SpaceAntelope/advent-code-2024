@@ -76,51 +76,46 @@ let isOutOfBounds (size: int*int) (point: Point) =
 // comboCount 222L 8L
 
 
-// let printMaze (maze: char array2d) (iconRules : Map<string, Set<int*int>*char>) =
-//     let (rows,cols) = matrixSize maze
-//     // let obsSet = obstacles |>  Set.ofSeq
-//     // let pathSet = path |> Set.ofSeq
-//     // let initSet = init |> readOnlyDict
-//     let printColIndex () = 
-//         [|0..cols-1|] 
-//         |> Array.map (sprintf "%03d") 
-//         |> Array.map _.ToCharArray() 
-//         |> Array.transpose 
-//         |> Array.iter (fun digits-> 
-//             printf "   "
-//             digits |> Array.iter(printf " %c")
-//             printfn ""
-//         )
-
-//     // let path' = path |> Array.ofSeq
-
+let printMatrixBase (matrix: char array2d) (iconRules : (Set<int*int>*char) seq) =
+    let (rows,cols) = matrixSize matrix
     
+    let printColIndex () = 
+        [|0..cols-1|] 
+        |> Array.map (sprintf "%03d") 
+        |> Array.map _.ToCharArray() 
+        |> Array.transpose 
+        |> Array.iter (fun digits-> 
+            printf "   "
+            digits |> Array.iter(printf " %c")
+            printfn ""
+        )
 
-//     printColIndex()
-//     for row in 0..rows-1 do
-//         printf "%03d " row
-//         for col in 0..cols-1 do                    
-//             iconRules 
-//             |> Map.fold(fun key (cells,icon) -> 
-//                 if Set.contains (row,col) cells
-//                 then icon
-//             )
-//             if initSet.ContainsKey (row,col) 
-//             then //'⦾' //⦿
-//                 match initSet[row,col] with 
-//                 | Up -> '▲'
-//                 | Dn -> '▼'
-//                 | Lt -> '◄'
-//                 | Rt -> '►'
-//             else if obsSet.Contains (row,col)
-//             then '░'
-//             else if pathSet.Contains(row,col)
-//             then '▇'
-//             else maze.[row,col]
-//             |> printf "%c "
-//         printf "%03d" row
-//         if row < rows then printfn ""
-//     printColIndex()
-//     printfn ""
+    printColIndex()
+    for row in 0..rows-1 do
+        printf "%03d " row
+        for col in 0..cols-1 do                    
+            iconRules 
+            |> Seq.tryFind (fun (cells,_) -> cells |> Set.contains (row,col))
+            |> function 
+            | Some (_,icon) -> icon
+            | None -> matrix.[row,col]
+            |> printf "%c "
+            // if initSet.ContainsKey (row,col) 
+            // then //'⦾' //⦿
+            //     match initSet[row,col] with 
+            //     | Up -> '▲'
+            //     | Dn -> '▼'
+            //     | Lt -> '◄'
+            //     | Rt -> '►'
+            // else if obsSet.Contains (row,col)
+            // then '░'
+            // else if pathSet.Contains(row,col)
+            // then '▇'
+            // else matrix.[row,col]
+            // |> printf "%c "
+        printf "%03d" row
+        if row < rows then printfn ""
+    printColIndex()
+    printfn ""
    
     

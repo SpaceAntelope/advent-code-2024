@@ -12,6 +12,7 @@ let parseData path =
 type Path = Global.Point list
 
 
+
 let printMatrix (obstacles : Path) (customObstacles: Path) (patrol: Path) 
     (position: int*int) (direction: int) (size: int*int) = 
     let (l1,l2) = size
