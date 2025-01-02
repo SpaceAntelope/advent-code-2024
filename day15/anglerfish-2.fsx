@@ -3,7 +3,19 @@ open System.IO
 
 #load "../global.fsx"
 
-type Direction = Up | Rt | Dn | Lt
+type Direction = 
+    Up | Rt | Dn | Lt 
+    with static member FromChar(c: char) = 
+            match c with
+            | '<' -> Lt
+            | '>' -> Rt
+            | '^' -> Up
+            | 'v' -> Dn
+            | dir -> failwithf "Unexpected direction %c" dir
+
+type Point = int*int
+type Cell = { Row: int; Col: int } with member x.AsPoint = x.Row,x.Col
+type Box = Point*Point
 
 let parse path = 
     let lines = File.ReadAllLines path
@@ -26,12 +38,17 @@ let parse path =
         |> Array.skipWhile (not<<String.IsNullOrEmpty)
         |> Array.skip 1
         |> Array.collect _.ToCharArray()
+        |> Array.map Direction.FromChar
     
     matrix, instructions
 
-// parse "input.example2"
-// |> fst
-// |> Global.printMatrix
+let rightFromLeftBoxPos (leftPos: int*int) =
+    let row,col = leftPos
+    row, col + 1
+
+let leftFromRightBoxPos (leftPos: int*int) =
+    let row,col = leftPos
+    row, col - 1
 
 let nextPosition (instruction: Direction) (pos: int*int) =
     let row,col = pos
@@ -40,6 +57,135 @@ let nextPosition (instruction: Direction) (pos: int*int) =
     | Rt -> row, col+1
     | Dn -> row+1, col
     | Lt -> row, col-1
+
+let rec isBoxMovable (matrix: char array2d) (dir : Direction) (boxPosLeft: Point) =
+    let nextBoxLeft = nextPosition dir boxPosLeft
+    let nextBoxRight = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
+
+    match dir, matrix.[fst nextBoxLeft, snd nextBoxLeft], matrix.[fst nextBoxRight, snd nextBoxRight] with
+    | _, '.', '.' -> true
+    | Lt, '.', _  -> true
+    | Rt, _, '.' -> true
+
+    | Lt, '#', _  -> false
+    | Rt, _, '#' -> false
+    | Up, '#', _ -> false
+    | Up, _, '#' -> false
+    | Dn, '#', _ -> false
+    | Dn, _, '#' -> false
+
+    | Lt, ']', _ -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
+    | Rt, _, '[' -> isBoxMovable matrix dir nextBoxRight
+    | Up, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
+    | Dn, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
+    | Up, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
+    | Dn, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
+    | Up, '.', '[' -> isBoxMovable matrix dir nextBoxRight
+    | Dn, '.', '[' -> isBoxMovable matrix dir nextBoxRight
+    | Up, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
+    | Dn, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
+
+    | dir', nextLeft, nextRight -> failwithf "Is Box Movable: Not sure what to do with %A %A = %c %A = %c" dir' nextBoxLeft nextLeft nextBoxRight nextRight
+
+let rec moveBox (matrix: char array2d) (dir: Direction) (boxPosLeft: Point) =
+    if isBoxMovable matrix dir boxPosLeft
+    then 
+        let nextLeftRow,nextLeftCol = nextPosition dir boxPosLeft
+        let nextRightRow, nextRightCol  = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
+        
+        match dir, matrix.[nextLeftRow, nextLeftCol], matrix.[nextRightRow, nextRightCol] with        
+        | Lt, ']', _  -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+        | Rt, _, '[' -> moveBox matrix dir (nextRightRow, nextRightCol)
+        | Up, '[',_ -> moveBox matrix dir (nextLeftRow-1, nextLeftCol)
+        | Dn, '[',_ -> moveBox matrix dir (nextLeftRow+1, nextLeftCol)
+        | Up, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+        | Dn, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+        | Up, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
+        | Dn, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
+        | Up, ']','[' -> 
+                    moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+                    moveBox matrix dir (nextRightRow, nextRightCol)
+        | Dn, ']','[' -> 
+                    moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+                    moveBox matrix dir (nextRightRow, nextRightCol)
+
+        | dir', nextLeft, nextRight -> failwithf "Move Box: Not sure what to do with %A %A = %c %A = %c" dir' (nextLeftRow, nextLeftCol) nextLeft (nextRightRow, nextRightCol) nextRight
+        
+        matrix.[nextLeftRow, nextLeftCol] <- '['
+        matrix.[nextRightRow, nextRightCol] <- ']'
+        match dir with 
+        | Up | Dn -> 
+            matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
+            matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
+        | Rt -> matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
+        | Lt -> matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
+
+        // caller should move robot
+
+let applyInstructions (matrix: char array2d) (instructions: Direction array) =
+    let state = Array2D.copy matrix
+    let initPosition = matrix |> Global.matrixIndices |> Seq.find (fun (row,col)-> matrix.[row,col] = '@')
+    
+    let rec apply (index: int) (position: int*int) =
+
+        let row,col = position
+        if index = instructions.Length
+        then state
+        else
+            let dir = instructions.[index]
+            let nextRow, nextCol = nextPosition dir position
+
+            match dir, state.[nextRow,nextCol] with
+            | _, '.' -> 
+                state.[row,col] <- '.'
+                state.[nextRow,nextCol] <- '@'
+                apply (index+1) (nextRow,nextCol)
+            | Rt, '[' -> 
+                //let nRow,nCol = moveBoxes position (nextRow, nextCol) state
+                moveBox state dir (nextRow,nextCol)
+                apply (index+1) (nRow,nCol)
+            | _ -> apply (index+1) (row,col)
+
+    apply 0 initPosition
+
+
+exit 666
+// type CellKind = Mover of Cell | Obstacle of Cll | Box of Cell*Cell | Empty
+
+// type BigBox(matrix: char array2d, leftRow:int, leftCol:int) =
+//     let left = { Row= leftRow; Col = leftCol }
+//     let right = { Row = leftRow; Col = leftCol + 1 }
+
+//     // static member Warehouse = Map<
+//     member x.Next(dir: Direction) =
+//         match dir with
+//         | Up -> BigBox(matrix, left.Row-1, left.Col)
+//         | Dn -> BigBox(matrix, left.Row+1, left.Col)
+//         | Lt -> BigBox(matrix, left.Row  , left.Col-1)
+//         | Rt -> BigBox(matrix, left.Row  , left.Col+1)
+
+//     member x.IsMovable(dir: Direction) =
+//         let lrow,lcol= nextPosition dir (left.ToTuple())
+//         let rrow,rcol= nextPosition dir (right.ToTuple())
+
+//         match matrix.[lrow,lcol],matrix.[rrow,rcol] with
+//         | '#', _ 
+//         | _, '#' -> false
+//         let leftAdjacent = nextPosition dir (leftRow,leftCol)        
+//         let row,col = leftAdjacent
+                
+        
+        
+//     member x.Move(dir : Direction) =
+//         //
+
+
+
+// parse "input.example2"
+// |> fst
+// |> Global.printMatrix
+
+
 
 let direction (from: int*int) (towards: int*int) = 
     let row1,col1 = from
@@ -146,13 +292,13 @@ let moveBoxes (position: int*int) (boxPos: int*int) (matrix : char array2d) =
     let boxesToPush = connectedBoxes boxPos dir [boxPos;boxPosPair] matrix
         
         
-    match boxesToPush with
-    | BoxResult.EncounteredWall
-        // match dir with 
-        // | Up -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
-        // | Rt -> [boxRow,boxCol+1]
-        // | Dn -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
-        // | Lt -> [boxRow,boxCol-1]
+    // match boxesToPush with
+    // | BoxResult.EncounteredWall
+    //     // match dir with 
+    //     // | Up -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
+    //     // | Rt -> [boxRow,boxCol+1]
+    //     // | Dn -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
+    //     // | Lt -> [boxRow,boxCol-1]
 
 
     let boxCount =
@@ -181,29 +327,6 @@ let moveBoxes (position: int*int) (boxPos: int*int) (matrix : char array2d) =
 
 
 
-let applyInstructions (matrix: char array2d) (instructions: char array) =
-    let state = Array2D.copy matrix
-    let initPosition = matrix |> Global.matrixIndices |> Seq.find (fun (row,col)-> matrix.[row,col] = '@')
-    
-    let rec apply (index: int) (position: int*int) =
-
-        let row,col = position
-        if index = instructions.Length
-        then state
-        else
-            let nextRow, nextCol = nextPosition  instructions.[index] position
-
-            match state.[nextRow,nextCol] with
-            | '.' -> 
-                state.[row,col] <- '.'
-                state.[nextRow,nextCol] <- '@'
-                apply (index+1) (nextRow,nextCol)
-            | 'O' -> 
-                let nRow,nCol = moveBoxes position (nextRow, nextCol) state
-                apply (index+1) (nRow,nCol)
-            | _ -> apply (index+1) (row,col)
-
-    apply 0 initPosition
 
 let gps (matrix: char array2d) = 
     matrix
