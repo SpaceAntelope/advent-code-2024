@@ -10,8 +10,8 @@ open Global
 
 (*
     Turns out most of the problem was that I didn't get that the puzzle required the guard to be starting from the
-    initial position every time, instead of just before the new obstacle. That the example cases worked either way
-    certainly didn't help.
+    initial position every time, instead of assuming they'll always get to the new obstacle from the correct direction. 
+    That the example cases worked either way certainly didn't help.
 *)
 
 type Dir = Up | Dn | Lt | Rt
