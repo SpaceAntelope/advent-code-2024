@@ -88,8 +88,7 @@ let rec isBoxMovable (matrix: char array2d) (dir : Direction) (boxPosLeft: Point
     | dir', nextLeft, nextRight -> failwithf "Is Box Movable: Not sure what to do with %A %A = %c %A = %c" dir' nextBoxLeft nextLeft nextBoxRight nextRight
 
 let rec moveBox (matrix: char array2d) (dir: Direction) (boxPosLeft: Point) =
-    if isBoxMovable matrix dir boxPosLeft
-    then 
+    
         let nextLeftRow,nextLeftCol = nextPosition dir boxPosLeft
         let nextRightRow, nextRightCol  = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
         
@@ -135,17 +134,41 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
             let dir = instructions.[index]
             let nextRow, nextCol = nextPosition dir position
 
+            if state.[nextRow,nextCol]='.'
+            then 
+                state.[row,col] <- '.'
+                state.[nextRow,nextCol] <- '@'
+                apply (index+1) (nextRow,nextCol)
+            else if isBoxMovable matrix dir 
             match dir, state.[nextRow,nextCol] with
             | _, '.' -> 
                 state.[row,col] <- '.'
                 state.[nextRow,nextCol] <- '@'
                 apply (index+1) (nextRow,nextCol)
             | Rt, '[' -> 
-                //let nRow,nCol = moveBoxes position (nextRow, nextCol) state
                 moveBox state dir (nextRow,nextCol)
-                apply (index+1) (nRow,nCol)
+                state.[row,col] <- '.'
+                state.[nextRow,nextCol] <- '@'
+                apply (index+1) (nextRow,nextCol)
+            | Lt, ']' ->
+                moveBox state dir (nextRow,nextCol)
+                state.[row,col] <- '.'
+                state.[nextRow,nextCol] <- '@'
+                apply (index+1) (nextRow,nextCol)
+            | Up, '[' 
+            | Dn, '[' -> 
+                moveBox state dir (nextRow,nextCol)
+                state.[row,col] <- '.'
+                state.[nextRow,nextCol] <- '@'
+                apply (index+1) (nextRow,nextCol)
+            | Up, ']' 
+            | Dn, ']' -> 
+                moveBox state dir (nextRow,nextCol-1)
+                state.[row,col] <- '.'
+                state.[nextRow,nextCol] <- '@'
+                apply (index+1) (nextRow,nextCol)
             | _ -> apply (index+1) (row,col)
-
+        else apply (index+1) position
     apply 0 initPosition
 
 
