@@ -84,89 +84,162 @@ let printWarehouse (matrix : char array2d) (path: (Point*Direction) seq) (init: 
         Set [pos],c
 
     let crates = 
-        let left = filter '['  |> Set,'█'
-        let right = filter ']' |> Set,'▉'
+        let left = filter '['  |> Set,'╠'
+        let right = filter ']' |> Set,'╣'
     
         [left;right]
         
     Global.printMatrixBase matrix [initPosition; obstacles; yield! directedPath; yield! crates ]
 
 
-let rec isBoxMovable (matrix: char array2d) (dir : Direction) (boxPosLeft: Point) =
-    let nextBoxLeft = nextPosition dir boxPosLeft
-    let nextBoxRight = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
+// let rec isBoxMovable (matrix: char array2d) (dir : Direction) (boxPosLeft: Point) =
+//     let nextBoxLeft = nextPosition dir boxPosLeft
+//     let nextBoxRight = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
 
-    match dir, matrix.[fst nextBoxLeft, snd nextBoxLeft], matrix.[fst nextBoxRight, snd nextBoxRight] with
-    | _, '.', '.' -> true
-    | Lt, '.', _  -> true
-    | Rt, _, '.' -> true
+//     match dir, matrix.[fst nextBoxLeft, snd nextBoxLeft], matrix.[fst nextBoxRight, snd nextBoxRight] with
+//     | _, '.', '.' -> true
+//     | Lt, '.', _  -> true
+//     | Rt, _, '.' -> true
 
-    | Lt, '#', _  -> false
-    | Rt, _, '#' -> false
-    | Up, '#', _ -> false
-    | Up, _, '#' -> false
-    | Dn, '#', _ -> false
-    | Dn, _, '#' -> false
+//     | Lt, '#', _  -> false
+//     | Rt, _, '#' -> false
+//     | Up, '#', _ -> false
+//     | Up, _, '#' -> false
+//     | Dn, '#', _ -> false
+//     | Dn, _, '#' -> false
 
-    | Lt, ']', _ -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
-    | Rt, _, '[' -> isBoxMovable matrix dir nextBoxRight
-    | Up, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
-    | Dn, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
-    | Up, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
-    | Dn, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
-    | Up, '.', '[' -> isBoxMovable matrix dir nextBoxRight
-    | Dn, '.', '[' -> isBoxMovable matrix dir nextBoxRight
-    | Up, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
-    | Dn, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
+//     | Lt, ']', _ -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
+//     | Rt, _, '[' -> isBoxMovable matrix dir nextBoxRight
+//     | Up, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
+//     | Dn, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
+//     | Up, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
+//     | Dn, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
+//     | Up, '.', '[' -> isBoxMovable matrix dir nextBoxRight
+//     | Dn, '.', '[' -> isBoxMovable matrix dir nextBoxRight
+//     | Up, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
+//     | Dn, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
 
-    | dir', nextLeft, nextRight -> failwithf "Is Box Movable: Not sure what to do with %A %A = %c %A = %c" dir' nextBoxLeft nextLeft nextBoxRight nextRight
+//     | dir', nextLeft, nextRight -> failwithf "Is Box Movable: Not sure what to do with %A %A = %c %A = %c" dir' nextBoxLeft nextLeft nextBoxRight nextRight
 
-let rec moveBox (matrix: char array2d) (dir: Direction) (boxPosLeft: Point) =
+// let rec moveBox (matrix: char array2d) (dir: Direction) (boxPosLeft: Point) =
     
-        let nextLeftRow,nextLeftCol = nextPosition dir boxPosLeft
-        let nextRightRow, nextRightCol  = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
+//         let nextLeftRow,nextLeftCol = nextPosition dir boxPosLeft
+//         let nextRightRow, nextRightCol  = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
         
-        match dir, matrix.[nextLeftRow, nextLeftCol], matrix.[nextRightRow, nextRightCol] with        
-        | Lt, ']', _  -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-        | Rt, _, '[' -> moveBox matrix dir (nextRightRow, nextRightCol)
-        | Up, '[',_ -> moveBox matrix dir (nextLeftRow-1, nextLeftCol)
-        | Dn, '[',_ -> moveBox matrix dir (nextLeftRow+1, nextLeftCol)
-        | Up, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-        | Dn, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-        | Up, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
-        | Dn, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
-        | Up, ']','[' -> 
-                    moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-                    moveBox matrix dir (nextRightRow, nextRightCol)
-        | Dn, ']','[' -> 
-                    moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-                    moveBox matrix dir (nextRightRow, nextRightCol)
+//         match dir, matrix.[nextLeftRow, nextLeftCol], matrix.[nextRightRow, nextRightCol] with        
+//         | Lt, ']', _  -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+//         | Rt, _, '[' -> moveBox matrix dir (nextRightRow, nextRightCol)
+//         | Up, '[',_ -> moveBox matrix dir (nextLeftRow-1, nextLeftCol)
+//         | Dn, '[',_ -> moveBox matrix dir (nextLeftRow+1, nextLeftCol)
+//         | Up, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+//         | Dn, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+//         | Up, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
+//         | Dn, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
+//         | Up, ']','[' -> 
+//                     moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+//                     moveBox matrix dir (nextRightRow, nextRightCol)
+//         | Dn, ']','[' -> 
+//                     moveBox matrix dir (nextLeftRow, nextLeftCol-1)
+//                     moveBox matrix dir (nextRightRow, nextRightCol)
 
-        | dir', nextLeft, nextRight -> failwithf "Move Box: Not sure what to do with %A %A = %c %A = %c" dir' (nextLeftRow, nextLeftCol) nextLeft (nextRightRow, nextRightCol) nextRight
+//         | dir', nextLeft, nextRight -> failwithf "Move Box: Not sure what to do with %A %A = %c %A = %c" dir' (nextLeftRow, nextLeftCol) nextLeft (nextRightRow, nextRightCol) nextRight
         
-        matrix.[nextLeftRow, nextLeftCol] <- '['
-        matrix.[nextRightRow, nextRightCol] <- ']'
-        match dir with 
-        | Up | Dn -> 
-            matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
-            matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
-        | Rt -> matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
-        | Lt -> matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
+//         matrix.[nextLeftRow, nextLeftCol] <- '['
+//         matrix.[nextRightRow, nextRightCol] <- ']'
+//         match dir with 
+//         | Up | Dn -> 
+//             matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
+//             matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
+//         | Rt -> matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
+//         | Lt -> matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
 
-        // caller should move robot
+//         // caller should move robot
+
+let rec movableBoxes (matrix : char array2d) (boxPos: Point*Point) (dir: Direction) : Point array option =
+    // let nextRow, nextCol = nextPosition dir pos
+    let (lrow,lcol),(rrow,rcol) = boxPos
+    match dir with 
+    | Rt -> 
+        let endIndex = 
+            matrix.[lrow,lcol..] 
+            |> Array.findIndex (fun c -> c <> '[' && c <> ']')
+            |> fun offset -> lcol + offset 
+        
+        if matrix.[lrow,endIndex] = '.' then Some [| for col in lcol..endIndex-1 do lrow,col |]
+        else None
+    | Lt ->
+        let endIndex = 
+            matrix.[rrow,0..rcol]
+            |> Array.findIndexBack (fun c -> c <> '[' && c <> ']')
+
+        // matrix.[rrow,0..rcol] |> Array.fold (sprintf "%s%c") "" |> printfn "%s"
+        // // printfn "Matched with %c %c"  matrix[lrow + rowOffset,lcol] matrix.[rrow+rowOffset,rcol]
+        // printfn "HEY! %A %A %A" dir (rrow,rcol) endIndex
+
+        if matrix.[rrow,endIndex] = '.' then Some [| for col in endIndex+1..rcol do rrow,col |]
+        else None
+    | dir -> 
+        let rowOffset = if dir = Up then -1 else 1
+        let l,r = boxPos
+        let boxes = 
+            match matrix[lrow + rowOffset,lcol],matrix.[rrow+rowOffset,rcol] with
+            | '[', ']' -> 
+                [|  movableBoxes matrix ((lrow + rowOffset,lcol),(rrow + rowOffset,rcol)) dir 
+                    Some [|l;r|]|]                 
+            | ']','[' ->
+                [|  movableBoxes matrix ((lrow + rowOffset,lcol - 1),(lrow + rowOffset,lcol)) dir
+                    movableBoxes matrix ((rrow + rowOffset,rcol),(rrow + rowOffset,rcol+1)) dir 
+                    Some [|l;r|]|]
+            | ']',_ ->
+                [|  movableBoxes matrix ((lrow + rowOffset,lcol-1),(lrow + rowOffset,lcol)) dir 
+                    Some [|l;r|]|]
+            | _,'[' ->
+                [|  movableBoxes matrix ((rrow + rowOffset,rcol),(rrow + rowOffset,rcol+1)) dir 
+                    Some [|l;r|]|]
+            | '.','.' -> [| Some [|lrow,lcol;rrow,rcol|] |]
+            | _  -> [|None|]
+            //|> Array.append [|Some[|l;r|]|]
+        
+        // matrix.[lrow,lcol..] |> Array.fold (sprintf "%s%c") "" |> printfn "%s"
+        // printfn "Matched with %c %c"  matrix[lrow + rowOffset,lcol] matrix.[rrow+rowOffset,rcol]
+        // printfn "HEY! %A %A %A" dir (lrow,lcol) boxes
+
+        if boxes |> Array.exists Option.isNone
+            then None
+            else boxes |> Array.choose id |> Array.concat |> Some
+    
 
 let applyInstructions (matrix: char array2d) (instructions: Direction array) =
     let state = Array2D.copy matrix
     let initPosition = matrix |> Global.matrixIndices |> Seq.find (fun (row,col)-> matrix.[row,col] = '@')
-    
+    let printInstructions index = 
+        if index < instructions.Length
+        then
+            instructions 
+            |> Array.mapi (fun i dir -> if i = index then $"[{dir}]" else string dir)
+            |> Array.skip (Math.Min(0,(index - 7)))
+            |> Array.take (Math.Min(15, instructions.Length))
+            |> Array.reduce (sprintf "%s %s")
+            |> printfn "Index: %d %s" index
+        else printfn "%A" instructions
+
     let rec apply (index: int) (position: int*int) =
+        let printWh path init = 
+            printWarehouse state path init
+            printInstructions index                
+            // Console.ReadLine() |> ignore
 
         let row,col = position
+
         if index = instructions.Length
-        then state
+        then 
+            printWh [position,instructions.[index-1]] (initPosition,Up)
+            state
         else
             let dir = instructions.[index]
             let nextRow, nextCol = nextPosition dir position
+
+            // printWh [position,dir] (initPosition,Up)
 
             if state.[nextRow,nextCol]='.'
             then 
@@ -175,243 +248,63 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
                 apply (index+1) (nextRow,nextCol)
             else if state.[nextRow,nextCol]='#'
             then apply (index+1) position
-            else if isBoxMovable matrix dir (nextRow,nextCol)
-            then
-                match dir, state.[nextRow,nextCol] with
-                // | _, '.' -> 
-                //     state.[row,col] <- '.'
-                //     state.[nextRow,nextCol] <- '@'
-                //     apply (index+1) (nextRow,nextCol)
-                | Rt, '[' -> 
-                    moveBox state dir (nextRow,nextCol)
+            else 
+                let box =
+                    match state.[nextRow,nextCol] with
+                    | '[' -> (nextRow,nextCol),(nextRow,nextCol+1)
+                    | ']' -> (nextRow,nextCol-1),(nextRow,nextCol)
+                    | c -> failwithf $"Not a box at %A{(nextRow,nextCol)} = %c{c}"
+                                 
+                (dir, movableBoxes state box dir)
+                //|> Global.tee "Nearby boxes"
+                |> function
+                | dir, Some boxes ->
+                    if dir = Rt 
+                    then
+                        boxes
+                        |> Array.rev
+                    else boxes
+                    |> Array.iter (fun (row,col) -> 
+                        match dir with
+                        | Up -> state.[row-1,col] <- state.[row,col]
+                        | Dn -> state.[row+1,col] <- state.[row,col]
+                        | Lt -> state.[row,col-1] <- state.[row,col]
+                        | Rt -> state.[row,col+1] <- state.[row,col]
+                        state.[row,col] <- '.' )
+
                     state.[row,col] <- '.'
                     state.[nextRow,nextCol] <- '@'
-                    apply (index+1) (nextRow,nextCol)
-                | Lt, ']' ->
-                    moveBox state dir (nextRow,nextCol)
-                    state.[row,col] <- '.'
-                    state.[nextRow,nextCol] <- '@'
-                    apply (index+1) (nextRow,nextCol)
-                | Up, '[' 
-                | Dn, '[' -> 
-                    moveBox state dir (nextRow,nextCol)
-                    state.[row,col] <- '.'
-                    state.[nextRow,nextCol] <- '@'
-                    apply (index+1) (nextRow,nextCol)
-                | Up, ']' 
-                | Dn, ']' -> 
-                    moveBox state dir (nextRow,nextCol-1)
-                    state.[row,col] <- '.'
-                    state.[nextRow,nextCol] <- '@'
-                    apply (index+1) (nextRow,nextCol)
-                | _ -> apply (index+1) (row,col)
-            else
-                printWarehouse matrix [position,dir] (initPosition,Up)
-                failwithf "Not sure what to do with %A at %A when facing %c." dir position matrix.[nextRow,nextCol] // apply (index+1) position
+                    apply (index+1) (nextRow,nextCol)        
+                | _, None -> 
+                    // state.[row,col] <- '.'
+                    // state.[nextRow,nextCol] <- '@'
+                    apply (index+1) (row,col)          
     
     apply 0 initPosition
-
-
-exit 666
-// type CellKind = Mover of Cell | Obstacle of Cll | Box of Cell*Cell | Empty
-
-// type BigBox(matrix: char array2d, leftRow:int, leftCol:int) =
-//     let left = { Row= leftRow; Col = leftCol }
-//     let right = { Row = leftRow; Col = leftCol + 1 }
-
-//     // static member Warehouse = Map<
-//     member x.Next(dir: Direction) =
-//         match dir with
-//         | Up -> BigBox(matrix, left.Row-1, left.Col)
-//         | Dn -> BigBox(matrix, left.Row+1, left.Col)
-//         | Lt -> BigBox(matrix, left.Row  , left.Col-1)
-//         | Rt -> BigBox(matrix, left.Row  , left.Col+1)
-
-//     member x.IsMovable(dir: Direction) =
-//         let lrow,lcol= nextPosition dir (left.ToTuple())
-//         let rrow,rcol= nextPosition dir (right.ToTuple())
-
-//         match matrix.[lrow,lcol],matrix.[rrow,rcol] with
-//         | '#', _ 
-//         | _, '#' -> false
-//         let leftAdjacent = nextPosition dir (leftRow,leftCol)        
-//         let row,col = leftAdjacent
-                
-        
-        
-//     member x.Move(dir : Direction) =
-//         //
-
-
-
-// parse "input.example2"
-// |> fst
-// |> Global.printMatrix
-
-
-
-let direction (from: int*int) (towards: int*int) = 
-    let row1,col1 = from
-    let row2, col2 = towards
-
-    match row2-row1, col2-col1 with
-    | r,c when r = 0 && c > 0 -> Rt
-    | r,c when r = 0 && c < 0 -> Lt
-    | r,c when r > 0 && c = 0 -> Dn
-    | r,c when r < 0 && c = 0 -> Up
-    | x -> failwithf "unforseen move from %A to %A (%A)" from towards x
-
-type BoxResult = 
-    | EncounteredWall
-    | NoAdjacentBoxes
-    | Movable of (int*int) list
-
-[<RequireQualifiedAccess>]
-module BoxResult = 
-    let merge (left: BoxResult) (right: BoxResult) =
-            match left,right with
-            | EncounteredWall, _ -> EncounteredWall
-            | _, EncounteredWall -> EncounteredWall
-            | Movable boxes, Movable moreBoxes -> Movable (boxes@moreBoxes)
-            | NoAdjacentBoxes, result -> result
-            | result, NoAdjacentBoxes -> result
-
-let rec connectedBoxes (boxPos: int*int) (direction: Direction) (boxesFound: (int*int) list) (matrix: char array2d) = 
-    let boxRow, boxCol= boxPos 
-    let adjacentCells = 
-        match matrix.[boxRow,boxCol], direction with 
-        | ']', Up -> 
-            let r1, c1 = boxRow-1,boxCol-1
-            let r2, c2 = boxRow-1,boxCol
-            let additional = 
-                [   if matrix.[r1,c1] = ']' then r1,c1-1
-                    if matrix.[r2,c2] = '[' then r2,c2+1 ]
-            [r1,c1;r2,c2; yield! additional]
-        | '[', Up -> 
-            let r1, c1 = boxRow-1,boxCol
-            let r2, c2 = boxRow-1,boxCol+1
-            let additional = 
-                [   if matrix.[r1,c1] = ']' then r1,c1-1
-                    if matrix.[r2,c2] = '[' then r2,c2+1 ]
-            [r1,c1;r2,c2; yield! additional]
-        | ']', Rt -> failwithf "World is in error, found broken box"
-        | '[', Rt -> [boxRow,boxCol+1;boxRow,boxCol+2]
-        | ']', Dn -> 
-            let r1, c1 = boxRow+1,boxCol-1
-            let r2, c2 = boxRow+1,boxCol
-            let additional = 
-                [   if matrix.[r1,c1] = ']' then r1,c1-1
-                    if matrix.[r2,c2] = '[' then r2,c2+1 ]
-            [r1,c1;r2,c2; yield! additional]
-        | '[', Dn -> 
-            let r1, c1 = boxRow+1,boxCol
-            let r2, c2 = boxRow+1,boxCol+1
-            let additional = 
-                [   if matrix.[r1,c1] = ']' then r1,c1-1
-                    if matrix.[r2,c2] = '[' then r2,c2+1 ]
-            [r1,c1;r2,c2; yield! additional]
-        | ']', Lt -> [boxRow,boxCol-2; boxRow,boxCol-1]
-        | '[', Lt -> failwithf "Found broken box"
-        |> List.map (fun (row,col) -> (row,col),matrix.[row,col])
-
-    if adjacentCells |> List.exists (fun ((_,_),value) -> value = '#')
-    then EncounteredWall
-    else 
-        let adjacentBoxes = 
-            adjacentCells 
-            |> List.filter (fun (_,value) -> value = '[' || value = ']')
-    
-        if adjacentBoxes.IsEmpty
-        then
-            if boxesFound.Length = 0
-            then NoAdjacentBoxes
-            else Movable boxesFound
-        else 
-            let updatedBoxesFound = 
-                boxesFound 
-                |> List.append (adjacentBoxes |> List.map fst)
-
-            adjacentBoxes
-            |> List.filter (fun (_,value) -> value = '[')
-            |> List.fold (fun state (pos,value) -> 
-                if state = EncounteredWall // same ax first matched rule, but here it prevents more recursion
-                then EncounteredWall
-                else 
-                    connectedBoxes pos direction updatedBoxesFound matrix
-                    |> BoxResult.merge state) NoAdjacentBoxes
-     
-
-let moveBoxes (position: int*int) (boxPos: int*int) (matrix : char array2d) =
-    let rowCount, colCount = Global.matrixSize matrix
-    let row,col = position
-    let boxRow, boxCol= boxPos
-    let dir = direction position boxPos
-
-    let boxPosPair = 
-        match matrix.[boxRow,boxCol] with
-        | ']' -> boxRow, boxCol - 1
-        | '[' -> boxRow, boxCol + 1
-
-    let boxesToPush = connectedBoxes boxPos dir [boxPos;boxPosPair] matrix
-        
-        
-    // match boxesToPush with
-    // | BoxResult.EncounteredWall
-    //     // match dir with 
-    //     // | Up -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
-    //     // | Rt -> [boxRow,boxCol+1]
-    //     // | Dn -> [boxRow-1,boxCol;boxRow-1,boxCol+1]
-    //     // | Lt -> [boxRow,boxCol-1]
-
-
-    let boxCount =
-        match dir with 
-        | Up -> matrix[0..boxRow,boxColLeft] |> Array.rev
-        | Rt -> matrix[boxRow,boxColLeft..colCount-1]
-        | Dn -> matrix[boxRow..rowCount-1,boxColLeft]
-        | Lt -> matrix[boxRow,0..boxColLeft] |> Array.rev
-        |> Array.takeWhile (fun x -> x = 'O')
-        |> Array.length
-    
-    let afterRow,afterCol = 
-        match dir with 
-        | Up -> boxRow - boxCount, boxColLeft
-        | Rt -> boxRow, boxColLeft + boxCount
-        | Dn -> boxRow + boxCount, boxColLeft
-        | Lt -> boxRow, boxColLeft - boxCount
-
-    match matrix.[afterRow,afterCol] with
-    | '.' -> 
-        matrix.[afterRow,afterCol] <- 'O'
-        matrix.[boxRow,boxColLeft] <- '@'
-        matrix.[row,col] <- '.'
-        boxRow,boxColLeft
-    | _ -> row,col
-
-
-
 
 let gps (matrix: char array2d) = 
     matrix
     |> Global.matrixIndices
     |> Seq.filter(fun (row,col) -> matrix.[row,col] = '[')
-    |> Seq.fold(fun state (row,col) -> state + row * 100 + col) 0
+    |> Seq.sumBy(fun (row,col) -> row * 100 + col) 
 
 
-// "input.example1"
-// |> parse
-// ||> applyInstructions 
-// |> gps
-// |> Global.shouldBe 2028
 
-// "input.example2"
-// |> parse
-// ||> applyInstructions
-// |> gps
-// |> Global.shouldBe 10092
+"input.example2"
+|> parse
+||> applyInstructions 
+|> gps
+|> Global.shouldBe 9021
 
-// "input.actual"
-// |> parse
-// ||> applyInstructions
-// |> gps
-// |> printfn "GPS sum is %d"
+"input.test1"
+|> parse
+||> applyInstructions 
+|> gps
+|> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
+
+"input.actual"
+|> parse
+||> applyInstructions 
+|> gps
+|> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
+
