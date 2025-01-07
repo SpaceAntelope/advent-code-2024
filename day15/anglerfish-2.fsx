@@ -58,6 +58,40 @@ let nextPosition (instruction: Direction) (pos: int*int) =
     | Dn -> row+1, col
     | Lt -> row, col-1
 
+let printWarehouse (matrix : char array2d) (path: (Point*Direction) seq) (init: (Point*Direction)) =  
+    let indices = matrix |> Global.matrixIndices
+    let filter c = indices |> Seq.filter (fun (row,col) -> matrix.[row,col] = c)
+    // let initPos = indices |> Seq.find (fun (row,col) -> matrix.[row,col] = '@')
+    let obstacles = filter '#' |> Set, '░'    
+    let directedPath = 
+        path 
+        |> Seq.groupBy snd 
+        |> Seq.map (fun (dir,grp)->
+            grp |> Seq.map fst |> Set,
+            match dir with 
+            | Up -> '▲'
+            | Dn -> '▼'
+            | Lt -> '◄'
+            | Rt -> '►')
+    let initPosition = 
+        let pos,dir = init
+        let c = 
+            match dir with 
+            | Up -> '↑'
+            | Dn -> '↓'
+            | Lt -> '←'
+            | Rt -> '→'
+        Set [pos],c
+
+    let crates = 
+        let left = filter '['  |> Set,'█'
+        let right = filter ']' |> Set,'▉'
+    
+        [left;right]
+        
+    Global.printMatrixBase matrix [initPosition; obstacles; yield! directedPath; yield! crates ]
+
+
 let rec isBoxMovable (matrix: char array2d) (dir : Direction) (boxPosLeft: Point) =
     let nextBoxLeft = nextPosition dir boxPosLeft
     let nextBoxRight = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
@@ -139,36 +173,42 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
                 state.[row,col] <- '.'
                 state.[nextRow,nextCol] <- '@'
                 apply (index+1) (nextRow,nextCol)
-            else if isBoxMovable matrix dir 
-            match dir, state.[nextRow,nextCol] with
-            | _, '.' -> 
-                state.[row,col] <- '.'
-                state.[nextRow,nextCol] <- '@'
-                apply (index+1) (nextRow,nextCol)
-            | Rt, '[' -> 
-                moveBox state dir (nextRow,nextCol)
-                state.[row,col] <- '.'
-                state.[nextRow,nextCol] <- '@'
-                apply (index+1) (nextRow,nextCol)
-            | Lt, ']' ->
-                moveBox state dir (nextRow,nextCol)
-                state.[row,col] <- '.'
-                state.[nextRow,nextCol] <- '@'
-                apply (index+1) (nextRow,nextCol)
-            | Up, '[' 
-            | Dn, '[' -> 
-                moveBox state dir (nextRow,nextCol)
-                state.[row,col] <- '.'
-                state.[nextRow,nextCol] <- '@'
-                apply (index+1) (nextRow,nextCol)
-            | Up, ']' 
-            | Dn, ']' -> 
-                moveBox state dir (nextRow,nextCol-1)
-                state.[row,col] <- '.'
-                state.[nextRow,nextCol] <- '@'
-                apply (index+1) (nextRow,nextCol)
-            | _ -> apply (index+1) (row,col)
-        else apply (index+1) position
+            else if state.[nextRow,nextCol]='#'
+            then apply (index+1) position
+            else if isBoxMovable matrix dir (nextRow,nextCol)
+            then
+                match dir, state.[nextRow,nextCol] with
+                // | _, '.' -> 
+                //     state.[row,col] <- '.'
+                //     state.[nextRow,nextCol] <- '@'
+                //     apply (index+1) (nextRow,nextCol)
+                | Rt, '[' -> 
+                    moveBox state dir (nextRow,nextCol)
+                    state.[row,col] <- '.'
+                    state.[nextRow,nextCol] <- '@'
+                    apply (index+1) (nextRow,nextCol)
+                | Lt, ']' ->
+                    moveBox state dir (nextRow,nextCol)
+                    state.[row,col] <- '.'
+                    state.[nextRow,nextCol] <- '@'
+                    apply (index+1) (nextRow,nextCol)
+                | Up, '[' 
+                | Dn, '[' -> 
+                    moveBox state dir (nextRow,nextCol)
+                    state.[row,col] <- '.'
+                    state.[nextRow,nextCol] <- '@'
+                    apply (index+1) (nextRow,nextCol)
+                | Up, ']' 
+                | Dn, ']' -> 
+                    moveBox state dir (nextRow,nextCol-1)
+                    state.[row,col] <- '.'
+                    state.[nextRow,nextCol] <- '@'
+                    apply (index+1) (nextRow,nextCol)
+                | _ -> apply (index+1) (row,col)
+            else
+                printWarehouse matrix [position,dir] (initPosition,Up)
+                failwithf "Not sure what to do with %A at %A when facing %c." dir position matrix.[nextRow,nextCol] // apply (index+1) position
+    
     apply 0 initPosition
 
 
