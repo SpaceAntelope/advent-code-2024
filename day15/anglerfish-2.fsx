@@ -14,8 +14,6 @@ type Direction =
             | dir -> failwithf "Unexpected direction %c" dir
 
 type Point = int*int
-type Cell = { Row: int; Col: int } with member x.AsPoint = x.Row,x.Col
-type Box = Point*Point
 
 let parse path = 
     let lines = File.ReadAllLines path
@@ -84,76 +82,12 @@ let printWarehouse (matrix : char array2d) (path: (Point*Direction) seq) (init: 
         Set [pos],c
 
     let crates = 
-        let left = filter '['  |> Set,'╠'
-        let right = filter ']' |> Set,'╣'
+        let left = filter '['  |> Set,'['
+        let right = filter ']' |> Set,']'
     
         [left;right]
         
     Global.printMatrixBase matrix [initPosition; obstacles; yield! directedPath; yield! crates ]
-
-
-// let rec isBoxMovable (matrix: char array2d) (dir : Direction) (boxPosLeft: Point) =
-//     let nextBoxLeft = nextPosition dir boxPosLeft
-//     let nextBoxRight = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
-
-//     match dir, matrix.[fst nextBoxLeft, snd nextBoxLeft], matrix.[fst nextBoxRight, snd nextBoxRight] with
-//     | _, '.', '.' -> true
-//     | Lt, '.', _  -> true
-//     | Rt, _, '.' -> true
-
-//     | Lt, '#', _  -> false
-//     | Rt, _, '#' -> false
-//     | Up, '#', _ -> false
-//     | Up, _, '#' -> false
-//     | Dn, '#', _ -> false
-//     | Dn, _, '#' -> false
-
-//     | Lt, ']', _ -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
-//     | Rt, _, '[' -> isBoxMovable matrix dir nextBoxRight
-//     | Up, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
-//     | Dn, '[', ']' -> isBoxMovable matrix dir nextBoxLeft
-//     | Up, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
-//     | Dn, ']', '[' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft)) && isBoxMovable matrix dir nextBoxRight
-//     | Up, '.', '[' -> isBoxMovable matrix dir nextBoxRight
-//     | Dn, '.', '[' -> isBoxMovable matrix dir nextBoxRight
-//     | Up, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
-//     | Dn, ']', '.' -> isBoxMovable matrix dir (leftFromRightBoxPos (nextBoxLeft))
-
-//     | dir', nextLeft, nextRight -> failwithf "Is Box Movable: Not sure what to do with %A %A = %c %A = %c" dir' nextBoxLeft nextLeft nextBoxRight nextRight
-
-// let rec moveBox (matrix: char array2d) (dir: Direction) (boxPosLeft: Point) =
-    
-//         let nextLeftRow,nextLeftCol = nextPosition dir boxPosLeft
-//         let nextRightRow, nextRightCol  = nextPosition dir (rightFromLeftBoxPos boxPosLeft)
-        
-//         match dir, matrix.[nextLeftRow, nextLeftCol], matrix.[nextRightRow, nextRightCol] with        
-//         | Lt, ']', _  -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-//         | Rt, _, '[' -> moveBox matrix dir (nextRightRow, nextRightCol)
-//         | Up, '[',_ -> moveBox matrix dir (nextLeftRow-1, nextLeftCol)
-//         | Dn, '[',_ -> moveBox matrix dir (nextLeftRow+1, nextLeftCol)
-//         | Up, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-//         | Dn, ']','.' -> moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-//         | Up, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
-//         | Dn, '.','[' -> moveBox matrix dir (nextRightRow, nextRightCol)
-//         | Up, ']','[' -> 
-//                     moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-//                     moveBox matrix dir (nextRightRow, nextRightCol)
-//         | Dn, ']','[' -> 
-//                     moveBox matrix dir (nextLeftRow, nextLeftCol-1)
-//                     moveBox matrix dir (nextRightRow, nextRightCol)
-
-//         | dir', nextLeft, nextRight -> failwithf "Move Box: Not sure what to do with %A %A = %c %A = %c" dir' (nextLeftRow, nextLeftCol) nextLeft (nextRightRow, nextRightCol) nextRight
-        
-//         matrix.[nextLeftRow, nextLeftCol] <- '['
-//         matrix.[nextRightRow, nextRightCol] <- ']'
-//         match dir with 
-//         | Up | Dn -> 
-//             matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
-//             matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
-//         | Rt -> matrix.[fst boxPosLeft, snd boxPosLeft] <- '.'
-//         | Lt -> matrix.[fst boxPosLeft, snd boxPosLeft + 1] <- '.'
-
-//         // caller should move robot
 
 let rec movableBoxes (matrix : char array2d) (boxPos: Point*Point) (dir: Direction) : Point array option =
     // let nextRow, nextCol = nextPosition dir pos
@@ -196,11 +130,12 @@ let rec movableBoxes (matrix : char array2d) (boxPos: Point*Point) (dir: Directi
             | _,'[' ->
                 [|  movableBoxes matrix ((rrow + rowOffset,rcol),(rrow + rowOffset,rcol+1)) dir 
                     Some [|l;r|]|]
-            | '.','.' -> [| Some [|lrow,lcol;rrow,rcol|] |]
+            // | _,'.' 
+            // | '.',_ -> [| Some [|l;r|] |]
+            | '.','.' -> [| Some [|l;r|] |]
             | _  -> [|None|]
             //|> Array.append [|Some[|l;r|]|]
         
-        // matrix.[lrow,lcol..] |> Array.fold (sprintf "%s%c") "" |> printfn "%s"
         // printfn "Matched with %c %c"  matrix[lrow + rowOffset,lcol] matrix.[rrow+rowOffset,rcol]
         // printfn "HEY! %A %A %A" dir (lrow,lcol) boxes
 
@@ -215,10 +150,12 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
     let printInstructions index = 
         if index < instructions.Length
         then
+            let start = Math.Max(0,index - 10)
+            let length = Math.Min(20, instructions.Length - start)
             instructions 
             |> Array.mapi (fun i dir -> if i = index then $"[{dir}]" else string dir)
-            |> Array.skip (Math.Min(0,(index - 7)))
-            |> Array.take (Math.Min(15, instructions.Length))
+            |> Array.skip start
+            |> Array.take length
             |> Array.reduce (sprintf "%s %s")
             |> printfn "Index: %d %s" index
         else printfn "%A" instructions
@@ -227,7 +164,7 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
         let printWh path init = 
             printWarehouse state path init
             printInstructions index                
-            // Console.ReadLine() |> ignore
+            Console.ReadLine() |> ignore
 
         let row,col = position
 
@@ -239,7 +176,7 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
             let dir = instructions.[index]
             let nextRow, nextCol = nextPosition dir position
 
-            // printWh [position,dir] (initPosition,Up)
+            printWh [position,dir] (initPosition,Up)
 
             if state.[nextRow,nextCol]='.'
             then 
@@ -256,7 +193,7 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
                     | c -> failwithf $"Not a box at %A{(nextRow,nextCol)} = %c{c}"
                                  
                 (dir, movableBoxes state box dir)
-                //|> Global.tee "Nearby boxes"
+                // |> Global.tee "Nearby boxes"
                 |> function
                 | dir, Some boxes ->
                     if dir = Rt 
@@ -264,6 +201,7 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
                         boxes
                         |> Array.rev
                     else boxes
+                    |> Array.distinct
                     |> Array.iter (fun (row,col) -> 
                         match dir with
                         | Up -> state.[row-1,col] <- state.[row,col]
@@ -290,11 +228,6 @@ let gps (matrix: char array2d) =
 
 
 
-"input.example2"
-|> parse
-||> applyInstructions 
-|> gps
-|> Global.shouldBe 9021
 
 "input.test1"
 |> parse
@@ -302,9 +235,28 @@ let gps (matrix: char array2d) =
 |> gps
 |> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
 
-"input.actual"
-|> parse
-||> applyInstructions 
-|> gps
-|> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
+// "input.test2"
+// |> parse
+// ||> applyInstructions 
+// |> gps
+// |> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
+
+// "input.example3"
+// |> parse
+// ||> applyInstructions 
+// |> gps
+// |> Global.shouldBe 618
+
+// "input.example2"
+// |> parse
+// ||> applyInstructions 
+// |> gps
+// |> Global.shouldBe 9021
+
+
+// "input.actual"
+// |> parse
+// ||> applyInstructions 
+// |> gps
+// |> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
 
