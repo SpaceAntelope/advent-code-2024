@@ -40,14 +40,6 @@ let parse path =
     
     matrix, instructions
 
-let rightFromLeftBoxPos (leftPos: int*int) =
-    let row,col = leftPos
-    row, col + 1
-
-let leftFromRightBoxPos (leftPos: int*int) =
-    let row,col = leftPos
-    row, col - 1
-
 let nextPosition (instruction: Direction) (pos: int*int) =
     let row,col = pos
     match instruction with
@@ -106,10 +98,6 @@ let rec movableBoxes (matrix : char array2d) (boxPos: Point*Point) (dir: Directi
             matrix.[rrow,0..rcol]
             |> Array.findIndexBack (fun c -> c <> '[' && c <> ']')
 
-        // matrix.[rrow,0..rcol] |> Array.fold (sprintf "%s%c") "" |> printfn "%s"
-        // // printfn "Matched with %c %c"  matrix[lrow + rowOffset,lcol] matrix.[rrow+rowOffset,rcol]
-        // printfn "HEY! %A %A %A" dir (rrow,rcol) endIndex
-
         if matrix.[rrow,endIndex] = '.' then Some [| for col in endIndex+1..rcol do rrow,col |]
         else None
     | dir -> 
@@ -124,20 +112,16 @@ let rec movableBoxes (matrix : char array2d) (boxPos: Point*Point) (dir: Directi
                 [|  movableBoxes matrix ((lrow + rowOffset,lcol - 1),(lrow + rowOffset,lcol)) dir
                     movableBoxes matrix ((rrow + rowOffset,rcol),(rrow + rowOffset,rcol+1)) dir 
                     Some [|l;r|]|]
+            | _, '#' -> [|None|]
+            | '#', _ -> [|None|]
             | ']',_ ->
                 [|  movableBoxes matrix ((lrow + rowOffset,lcol-1),(lrow + rowOffset,lcol)) dir 
                     Some [|l;r|]|]
             | _,'[' ->
                 [|  movableBoxes matrix ((rrow + rowOffset,rcol),(rrow + rowOffset,rcol+1)) dir 
                     Some [|l;r|]|]
-            // | _,'.' 
-            // | '.',_ -> [| Some [|l;r|] |]
             | '.','.' -> [| Some [|l;r|] |]
             | _  -> [|None|]
-            //|> Array.append [|Some[|l;r|]|]
-        
-        // printfn "Matched with %c %c"  matrix[lrow + rowOffset,lcol] matrix.[rrow+rowOffset,rcol]
-        // printfn "HEY! %A %A %A" dir (lrow,lcol) boxes
 
         if boxes |> Array.exists Option.isNone
             then None
@@ -160,11 +144,43 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
             |> printfn "Index: %d %s" index
         else printfn "%A" instructions
 
+    let crateCount = 
+        matrix 
+        |> Global.matrixIndices 
+        |> Seq.filter (fun (r,c) -> matrix.[r,c] = '[')
+        |> Seq.length
+    
+    let validateState state =
+        let mutable stateCrateCount = 0
+        let mutable result = true
+        let rows,cols = Global.matrixSize state
+        
+        for row in 0..rows-1 do
+            for col in 0..cols-1 do
+                let c = state.[row,col]
+                try
+                    if c = '['
+                    then
+                        stateCrateCount <- stateCrateCount + 1 
+                        state.[row,col+1] |> Global.shouldBe ']'
+                    if c = ']'
+                    then state.[row,col-1] |> Global.shouldBe '['
+                    if matrix.[row,col] = '#'
+                    then c |> Global.shouldBe '#'
+                with exn ->
+                    printfn "Cells: %A = state: %c original: %c" (row,col) state.[row,col] matrix.[row,col]
+                    printfn "Error: %s" exn.Message
+                    result <- false
+        
+        stateCrateCount |> Global.shouldBe crateCount
+        
+        result
+
     let rec apply (index: int) (position: int*int) =
         let printWh path init = 
             printWarehouse state path init
-            printInstructions index                
-            Console.ReadLine() |> ignore
+            printInstructions index
+            // Console.ReadLine() |> ignore
 
         let row,col = position
 
@@ -176,7 +192,12 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
             let dir = instructions.[index]
             let nextRow, nextCol = nextPosition dir position
 
-            printWh [position,dir] (initPosition,Up)
+            if not (validateState state)
+            then 
+                printWh [position,dir] (initPosition,Up)
+                printfn "Stopped at %d of %d" index instructions.Length
+                printfn "Here it is %A %A" position dir
+                exit 666
 
             if state.[nextRow,nextCol]='.'
             then 
@@ -214,8 +235,6 @@ let applyInstructions (matrix: char array2d) (instructions: Direction array) =
                     state.[nextRow,nextCol] <- '@'
                     apply (index+1) (nextRow,nextCol)        
                 | _, None -> 
-                    // state.[row,col] <- '.'
-                    // state.[nextRow,nextCol] <- '@'
                     apply (index+1) (row,col)          
     
     apply 0 initPosition
@@ -227,7 +246,28 @@ let gps (matrix: char array2d) =
     |> Seq.sumBy(fun (row,col) -> row * 100 + col) 
 
 
+let matrix = 
+    "# # # # # # # # # # # # # #
+ # # . . . . . . . . . . # #
+ # # . . [ ] . . . . . . # #
+ # # . . [ ] . . [ ] [ ] # #
+ # # [ ] [ ] # # # # . . # #
+ # # . . . [ ] . # # # # # #
+ # # . . [ ] . . [ ] . . # #
+ # # . . [ ] [ ] [ ] . . # #
+ # # . . [ ] # # . . . . # #
+ # # . . [ ] . . [ ] [ ] # #
+ # # . . . [ ] . . . . . # #
+ # # [ ] . . . . . . . . # #
+ # # [ ] . @ # # . . . . # #
+ # # . . . . [ ] . . . . # #
+ # # # # # # # # # # # # # # "
+    |> _.Split('\n')
+    |> Array.map _.Trim().Split(' ')    
+    |> array2D
+    |> Array2D.map (fun str -> char str)
 
+applyInstructions matrix [|Up;Up;Up;Up;Up|]
 
 "input.test1"
 |> parse
@@ -235,28 +275,28 @@ let gps (matrix: char array2d) =
 |> gps
 |> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
 
-// "input.test2"
-// |> parse
-// ||> applyInstructions 
-// |> gps
-// |> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
+"input.test2"
+|> parse
+||> applyInstructions 
+|> gps
+|> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
 
-// "input.example3"
-// |> parse
-// ||> applyInstructions 
-// |> gps
-// |> Global.shouldBe 618
+"input.example3"
+|> parse
+||> applyInstructions 
+|> gps
+|> Global.shouldBe 618
 
-// "input.example2"
-// |> parse
-// ||> applyInstructions 
-// |> gps
-// |> Global.shouldBe 9021
+"input.example2"
+|> parse
+||> applyInstructions 
+|> gps
+|> Global.shouldBe 9021
 
 
-// "input.actual"
-// |> parse
-// ||> applyInstructions 
-// |> gps
-// |> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
+"input.actual"
+|> parse
+||> applyInstructions 
+|> gps
+|> printfn "Τhe sum of all boxes' final GPS coordinates is %d"
 
