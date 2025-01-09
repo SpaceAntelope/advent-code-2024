@@ -3,6 +3,8 @@ open System.Collections.Generic
 
 #load "../global.fsx"
 
+type Point = int*int
+
 let parse path = 
     path
     |> File.ReadAllLines
@@ -20,14 +22,18 @@ let neighbourhood (matrix: char array2d) (row,col) =
         && matrix.[r,c] = matrix.[row,col])
 
 let perimeter (matrix: char array2d) (region: (int*int) list) =    
-    let rowCount = matrix |> Array2D.length1
-    let colCount = matrix |> Array2D.length2
-    let regionPlot = region |> List.head |> fun (row,col) -> matrix.[row,col]
+    let size = Global.matrixSize matrix
+    let isOutOfBounds = Global.isOutOfBounds size
+    
+    let regionPlot = 
+        region 
+        |> List.head 
+        |> fun (row,col) -> matrix.[row,col]
+        
     region
     |> List.collect (fun (row,col) -> [row-1,col;row,col+1;row+1,col;row,col-1])
     |> List.filter (fun (row,col) ->
-        row < 0 || col < 0 || row >= rowCount || col >= colCount
-        || matrix.[row,col] <> regionPlot)
+        isOutOfBounds (row,col) || matrix.[row,col] <> regionPlot)
         
 let findRegions (matrix: char array2d) = 
     let rec fill (visited: HashSet<int*int>) (plot: int*int) =
@@ -41,7 +47,7 @@ let findRegions (matrix: char array2d) =
             if remaining <> [] 
             then
                 
-                let region =  HashSet<int*int>()                
+                let region =  HashSet<int*int>() 
                 remaining |> List.head |> fill region
                 
                 yield region
@@ -50,6 +56,7 @@ let findRegions (matrix: char array2d) =
                         |> List.except region
                         |> allRegions
         ]
+
     matrix
     |> Global.matrixIndices
     |> List.ofSeq

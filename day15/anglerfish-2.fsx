@@ -112,7 +112,7 @@ let rec movableBoxes (matrix : char array2d) (boxPos: Point*Point) (dir: Directi
                 [|  movableBoxes matrix ((lrow + rowOffset,lcol - 1),(lrow + rowOffset,lcol)) dir
                     movableBoxes matrix ((rrow + rowOffset,rcol),(rrow + rowOffset,rcol+1)) dir 
                     Some [|l;r|]|]
-            | _, '#' -> [|None|]
+            | _, '#' 
             | '#', _ -> [|None|]
             | ']',_ ->
                 [|  movableBoxes matrix ((lrow + rowOffset,lcol-1),(lrow + rowOffset,lcol)) dir 
