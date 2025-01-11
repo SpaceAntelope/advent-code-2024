@@ -19,7 +19,7 @@ let neighbourhood (matrix: char array2d) (row,col) =
     |> List.filter (fun (r,c) ->
         r>=0 && c>=0 
         && r < rowCount && c < colCount
-        && matrix.[r,c] = matrix.[row,col])
+        && matrix.[r,c] = matrix.[row,col])    
 
 let perimeter (matrix: char array2d) (region: (int*int) list) =    
     let size = Global.matrixSize matrix

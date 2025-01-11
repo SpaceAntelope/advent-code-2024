@@ -72,6 +72,11 @@ type DirectedBorder = {
         member x.HasDir(dir:Dir) = 
             x.Directions |> List.contains dir
 
+let neighbourhood point = 
+    let row,col = point
+    [row-1,col;row,col+1;row+1,col;row,col-1]
+
+
 let regionBorder matrix region = 
     let isOutOfBounds = isOutOfBoundsFactory matrix
     
@@ -81,7 +86,7 @@ let regionBorder matrix region =
         |> fun (row,col) -> matrix.[row,col]
         
     region
-    |> List.map (fun point -> point, Common.neighbourhood matrix point )
+    |> List.map (fun point -> point, neighbourhood point )
     |> List.filter (fun (pt, n) ->
         n |> List.exists (fun (row,col) -> isOutOfBounds row col || matrix.[row,col] <> regionPlot))
     |> List.map fst
@@ -97,8 +102,10 @@ let regionDirectedBorder matrix region =
     
     let isOutOfRegion (row, col) = isOutOfBounds row col || matrix.[row,col] <> regionPlot
     region
-    |> List.map (fun point -> point, Common.neighbourhood matrix point )
+    |> List.map (fun point -> point, neighbourhood point )
     |> List.filter (fun (pt, n) ->
+        // n |> List.fold(fun s c -> sprintf "N: %s %A (%c)" s c matrix.[fst c, snd c]) ""
+        // |> printfn "C: %A %c %s" pt matrix.[fst pt, snd pt]
         n |> List.exists isOutOfRegion)
     |> List.map (fun (pt1,n) ->
         pt1, n |> List.filter isOutOfRegion |> List.map (fun pt2 -> Dir.From(pt1,pt2)) )
